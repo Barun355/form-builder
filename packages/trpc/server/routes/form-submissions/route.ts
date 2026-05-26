@@ -9,9 +9,11 @@ import {
   badRequest,
   forbidden,
   notFound,
+  planLocked,
   tooManyRequests,
 } from "../../utils/errors";
 import { getClientIp } from "@repo/services/rate-limit";
+import { getUserPlan } from "@repo/services/plan-gating";
 import {
   submissionStartLimiter,
   submissionCompleteLimiter,
@@ -134,12 +136,18 @@ export const formSubmissionsRouter = router({
         tags: TAGS,
         summary: "Get a submission with its version's schema",
         description:
-          "Returns the submission embedded with the version that was being filled when it was submitted. Used by the admin drawer to replay against the right schema.",
+          "Returns the submission embedded with the version that was being filled when it was submitted. Plan-gated: Free users get PLAN_LOCKED:submission_detail.",
       },
     })
     .input(getSubmissionInputModel)
     .output(getSubmissionOutputModel)
     .query(async ({ input, ctx }) => {
+      // Plan gate: individual submission detail is paid-only. Kept as
+      // protectedProcedure (not paidProcedure) so other tools/UIs that
+      // tangentially hit this don't break — gate is here, inline.
+      const plan = await getUserPlan(ctx.user.id);
+      if (plan === "free") throw planLocked("submission_detail");
+
       try {
         return await formSubmissionsService.getById({
           id: input.id,

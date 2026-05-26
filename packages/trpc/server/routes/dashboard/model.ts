@@ -12,6 +12,21 @@ export const statsOutputModel = z.object({
   completionRateDeltaPct: z.number().nullable(),
   weeklySubmissions: z.number().int().nonnegative(),
   weeklySubmissionsDeltaPct: z.number().nullable(),
+  monthlyLockedCount: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe(
+      "Completed submissions this month hidden by plan cap. >0 triggers upgrade banner.",
+    ),
+  monthlyTotalSubmissions: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("Total completed submissions this month (visible + locked)."),
+  plan: z
+    .enum(["free", "pro", "business"])
+    .describe("Current plan — used by UI to decide whether to render gates."),
 });
 
 // Route-layer Zod must use a primitive scalar (`trpc-to-openapi` GET inputs

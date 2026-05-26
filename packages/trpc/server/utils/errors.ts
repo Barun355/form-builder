@@ -33,3 +33,20 @@ export const tooManyRequests = (
         ? Object.assign(new Error(message), { retryAfterMs })
         : undefined,
   });
+
+/**
+ * Plan-gated feature was accessed by a user whose plan doesn't include it.
+ * The reason string is propagated to the client via the errorFormatter so
+ * the frontend can branch on `error.data.planLocked` ("form_limit",
+ * "advanced_analytics", "submission_detail").
+ */
+export type PlanLockedReason =
+  | "form_limit"
+  | "advanced_analytics"
+  | "submission_detail";
+
+export const planLocked = (reason: PlanLockedReason, message?: string) =>
+  new TRPCError({
+    code: "FORBIDDEN",
+    message: message ?? `PLAN_LOCKED:${reason}`,
+  });

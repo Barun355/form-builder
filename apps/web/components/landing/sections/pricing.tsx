@@ -6,6 +6,7 @@ import { Check, Minus } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 
 import { Button } from "~/components/ui/button";
+import { EarlyAccessDialog } from "~/components/landing/early-access-dialog";
 import { SectionHeader } from "~/components/landing/motion/section-header";
 import { cn } from "~/lib/utils";
 
@@ -17,6 +18,10 @@ type Tier = {
   unit: string;
   cta: { label: string; href: string };
   featured?: boolean;
+  /** When true, clicking the CTA opens the early-access feedback dialog
+   *  instead of navigating. Used for Pro and Business in v1 since we
+   *  haven't built billing yet — we collect demand signal instead. */
+  interestOnly?: boolean;
   features: { label: string; included: boolean }[];
 };
 
@@ -44,7 +49,8 @@ const TIERS: Tier[] = [
     annual: 190,
     unit: "user",
     featured: true,
-    cta: { label: "Start 14-day trial", href: "/signup?plan=pro" },
+    interestOnly: true,
+    cta: { label: "Get early access", href: "#" },
     features: [
       { label: "Unlimited submissions", included: true },
       { label: "Unlimited forms", included: true },
@@ -60,7 +66,8 @@ const TIERS: Tier[] = [
     monthly: 49,
     annual: 470,
     unit: "seat",
-    cta: { label: "Contact sales", href: "mailto:hello@simpleform.app" },
+    interestOnly: true,
+    cta: { label: "Get early access", href: "#" },
     features: [
       { label: "Everything in Pro", included: true },
       { label: "Team workspaces & roles", included: true },
@@ -180,14 +187,26 @@ export function Pricing() {
                   </AnimatePresence>
                 </div>
 
-                <Button
-                  asChild
-                  size="lg"
-                  className="mt-6 w-full"
-                  variant={tier.featured ? "default" : "outline"}
-                >
-                  <Link href={tier.cta.href}>{tier.cta.label}</Link>
-                </Button>
+                {tier.interestOnly ? (
+                  <EarlyAccessDialog>
+                    <Button
+                      size="lg"
+                      className="mt-6 w-full"
+                      variant={tier.featured ? "default" : "outline"}
+                    >
+                      {tier.cta.label}
+                    </Button>
+                  </EarlyAccessDialog>
+                ) : (
+                  <Button
+                    asChild
+                    size="lg"
+                    className="mt-6 w-full"
+                    variant={tier.featured ? "default" : "outline"}
+                  >
+                    <Link href={tier.cta.href}>{tier.cta.label}</Link>
+                  </Button>
+                )}
 
                 <ul className="mt-6 space-y-3">
                   {tier.features.map((f) => (

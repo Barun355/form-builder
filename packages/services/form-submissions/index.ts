@@ -39,6 +39,7 @@ import {
 import { extractMeta, type MinimalRequest } from "./meta";
 import { validateDataShape } from "./validate";
 import { decodeCursor, encodeCursor } from "./cursor";
+import { getOwnerVisibility, visibilityFilter } from "../plan-gating";
 
 // Drizzle transaction type doesn't unify with the root db type cleanly.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -247,6 +248,9 @@ class FormSubmissionsService {
 
     await this.assertFormOwnership({ formId, requestedBy });
 
+    // Apply plan-based visibility cap. Filter is `TRUE` for paid/under-cap.
+    const visibility = await getOwnerVisibility(requestedBy);
+
     const cursorPart = cursor ? decodeCursor(cursor) : null;
 
     const where = and(
@@ -261,6 +265,7 @@ class FormSubmissionsService {
       cursorPart
         ? sql`(COALESCE(${formSubmissionsTable.submittedAt}, ${formSubmissionsTable.startedAt}), ${formSubmissionsTable.id}) < (${new Date(cursorPart.ts)}, ${cursorPart.id})`
         : undefined,
+      visibilityFilter(visibility),
     );
 
     const rows = await db
@@ -331,6 +336,20 @@ class FormSubmissionsService {
       throw new Error("Forbidden");
     }
 
+    // Plan-based visibility: if the submission falls in the gated zone of
+    // the current month (Free user past cap), pretend it doesn't exist.
+    // Route-level paidProcedure guard is the primary defense; this is the
+    // secondary belt-and-braces check.
+    const visibility = await getOwnerVisibility(requestedBy);
+    if (visibility.cutoffAt) {
+      const submittedAt = row.submission.submittedAt ?? row.submission.startedAt;
+      const inCurrentMonth = submittedAt >= visibility.startOfMonth;
+      const beforeCutoff = submittedAt < visibility.cutoffAt;
+      if (inCurrentMonth && beforeCutoff) {
+        throw new Error("Submission not found");
+      }
+    }
+
     return {
       id: row.submission.id,
       formId: row.submission.formId,
@@ -359,6 +378,11 @@ class FormSubmissionsService {
 
     const form = await this.assertFormOwnership({ formId, requestedBy });
 
+    // Apply plan-based visibility — CSV export is "strict" (only includes
+    // rows the user could see in their dashboard). Older submissions
+    // beyond their cap unlock when they upgrade.
+    const visibility = await getOwnerVisibility(requestedBy);
+
     const versionRows = await db
       .selectDistinct({ versionId: formSubmissionsTable.formVersionId })
       .from(formSubmissionsTable)
@@ -371,6 +395,7 @@ class FormSubmissionsService {
             ? gte(formSubmissionsTable.startedAt, dateFrom)
             : undefined,
           dateTo ? lte(formSubmissionsTable.startedAt, dateTo) : undefined,
+          visibilityFilter(visibility),
         ),
       );
 
@@ -443,6 +468,7 @@ class FormSubmissionsService {
         lastCursor
           ? sql`(COALESCE(${formSubmissionsTable.submittedAt}, ${formSubmissionsTable.startedAt}), ${formSubmissionsTable.id}) < (${new Date(lastCursor.ts)}, ${lastCursor.id})`
           : undefined,
+        visibilityFilter(visibility),
       );
       const chunk = await db
         .select({

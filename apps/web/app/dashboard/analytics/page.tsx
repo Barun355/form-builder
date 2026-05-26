@@ -10,6 +10,7 @@ import { cn } from "~/lib/utils";
 
 import { DashboardShell } from "~/components/dashboard-shell";
 import { CreateFormDialog } from "~/components/create-form-dialog";
+import { PlanGate } from "~/components/plan-gate";
 import {
   useGlobalAnalyticsAudience,
   useGlobalAnalyticsKpis,
@@ -44,6 +45,7 @@ export default function AnalyticsPage() {
 
   return (
     <DashboardShell>
+      <PlanGate feature="global_analytics">
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -103,6 +105,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+      </PlanGate>
     </DashboardShell>
   );
 }

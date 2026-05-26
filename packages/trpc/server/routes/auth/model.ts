@@ -43,6 +43,11 @@ export const currentUserDetailsOutputModel = z.object({
   userGlobalFormSlug: z
     .string()
     .describe("Per-user slug used as the namespace in public form URLs"),
+  plan: z
+    .enum(["free", "pro", "business"])
+    .describe(
+      "Subscription tier — drives form-creation cap, submission visibility, and gated UI surfaces.",
+    ),
 });
 
 export const signOutOutputModel = z.object({

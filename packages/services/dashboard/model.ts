@@ -14,6 +14,13 @@ export const dashboardStatsOutput = z.object({
   completionRateDeltaPct: z.number().nullable(),
   weeklySubmissions: z.number().int().nonnegative(),
   weeklySubmissionsDeltaPct: z.number().nullable(),
+  /** Number of completed submissions this calendar month hidden by plan
+   *  cap. > 0 triggers the dashboard upgrade banner. */
+  monthlyLockedCount: z.number().int().nonnegative(),
+  /** Total completed submissions this month (visible + locked). */
+  monthlyTotalSubmissions: z.number().int().nonnegative(),
+  /** Current plan — used by UI to know whether to render banners at all. */
+  plan: z.enum(["free", "pro", "business"]),
 });
 export type DashboardStatsOutputType = z.infer<typeof dashboardStatsOutput>;
 

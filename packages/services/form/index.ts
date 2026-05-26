@@ -19,6 +19,9 @@ import {
 } from "@repo/database/models/form-versions";
 import { formSubmissionsTable } from "@repo/database/models/form-submissions";
 
+import { PLANS } from "../plans";
+import { getOwnedFormCount, getUserPlan } from "../plan-gating";
+
 import {
   archiveFormInput,
   closeFormInput,
@@ -91,6 +94,18 @@ class FormService {
   ): Promise<CreateFormOutputType> {
     const { title, description, createdBy } =
       await createFormInput.parseAsync(payload);
+
+    // Plan-based form-creation cap. Free = 3 forms max. Pro/Business
+    // unlimited. Throws a sentinel error string that the tRPC layer maps
+    // to FORBIDDEN with PLAN_LOCKED:form_limit.
+    const plan = await getUserPlan(createdBy);
+    const cap = PLANS[plan].formLimit;
+    if (Number.isFinite(cap)) {
+      const existingCount = await getOwnedFormCount(createdBy);
+      if (existingCount >= cap) {
+        throw new Error("PLAN_LOCKED:form_limit");
+      }
+    }
 
     return await db.transaction(async (tx) => {
       const slug = generateFormSlug(title);

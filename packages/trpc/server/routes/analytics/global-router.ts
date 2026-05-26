@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { analyticsService } from "../../services";
-import { protectedProcedure, router } from "../../trpc";
+import { paidProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
 import {
   globalAudienceOutputModel,
@@ -14,7 +14,7 @@ const TAGS = ["Analytics — global"];
 const getPath = generatePath("/analytics/global");
 
 export const globalAnalyticsRouter = router({
-  kpis: protectedProcedure
+  kpis: paidProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -31,7 +31,7 @@ export const globalAnalyticsRouter = router({
       return await analyticsService.globalKpis({ requestedBy: ctx.user.id });
     }),
 
-  topForms: protectedProcedure
+  topForms: paidProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -49,7 +49,7 @@ export const globalAnalyticsRouter = router({
       });
     }),
 
-  audience: protectedProcedure
+  audience: paidProcedure
     .meta({
       openapi: {
         method: "GET",

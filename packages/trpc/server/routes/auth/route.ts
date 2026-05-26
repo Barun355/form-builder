@@ -120,6 +120,7 @@ export const authRouter = router({
         emailVerified: user.emailVerified,
         profileImageUrl: user.profileImageUrl,
         userGlobalFormSlug: user.userGlobalFormSlug,
+        plan: user.plan,
       };
     }),
 

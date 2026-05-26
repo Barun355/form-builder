@@ -50,6 +50,8 @@ const navItems = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname() ?? "";
+  const { user } = useUser();
+  const isFreePlan = user?.plan === "free";
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -90,6 +92,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <Link href={item.href}>
                         <item.icon />
                         <span>{item.title}</span>
+                        {item.href === "/dashboard/analytics" && isFreePlan ? (
+                          <span className="ml-auto inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                            Pro
+                          </span>
+                        ) : null}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

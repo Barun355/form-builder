@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
@@ -10,7 +10,7 @@ import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { StatusChip } from "~/components/status-chip";
 import { ExportCsvButton } from "~/components/submissions/export-csv-button";
-import { SubmissionDrawer } from "~/components/submissions/submission-drawer";
+import { LockedSubmissionsFooter } from "~/components/submissions/locked-footer";
 import { SubmissionsFilterBar, type SubmissionsFilters } from "~/components/submissions/submissions-filter-bar";
 import { SubmissionsTable } from "~/components/submissions/submissions-table";
 import { useForm } from "~/hooks/form";
@@ -57,13 +57,6 @@ export default function SubmissionsPage({
     const qs = next.toString();
     router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
   };
-
-  const [drawerId, setDrawerId] = useState<string | null>(null);
-
-  // Wipe drawer state when filters change (avoids drawer pointing at stale row)
-  useEffect(() => {
-    setDrawerId(null);
-  }, [pathname, searchParams]);
 
   return (
     <DashboardShell>
@@ -125,18 +118,16 @@ export default function SubmissionsPage({
               dateFrom={filters.dateFrom ? new Date(filters.dateFrom) : undefined}
               dateTo={filters.dateTo ? new Date(filters.dateTo) : undefined}
               search={filters.search || undefined}
-              onRowClick={(submissionId) => setDrawerId(submissionId)}
+              onRowClick={(submissionId) =>
+                router.push(
+                  `/dashboard/forms/${id}/submissions/${submissionId}`,
+                )
+              }
             />
+            <LockedSubmissionsFooter />
           </div>
         </div>
       </div>
-
-      <SubmissionDrawer
-        submissionId={drawerId}
-        onOpenChange={(open) => {
-          if (!open) setDrawerId(null);
-        }}
-      />
     </DashboardShell>
   );
 }

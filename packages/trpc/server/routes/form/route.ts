@@ -1,7 +1,7 @@
 import { formService } from "../../services";
 import { protectedProcedure, publicProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
-import { badRequest, conflict, forbidden, notFound } from "../../utils/errors";
+import { badRequest, conflict, forbidden, notFound, planLocked } from "../../utils/errors";
 import {
   archiveFormInputModel,
   closeFormInputModel,
@@ -32,6 +32,10 @@ const getPath = generatePath("/form");
 function mapServiceError(err: unknown): never {
   const message = err instanceof Error ? err.message : String(err);
   const lower = message.toLowerCase();
+  // Plan-cap sentinel — propagates structured planLocked reason to client
+  if (message.startsWith("PLAN_LOCKED:form_limit")) {
+    throw planLocked("form_limit");
+  }
   if (lower.includes("forbidden")) throw forbidden();
   if (lower.includes("not found")) throw notFound(message);
   if (lower.includes("conflict") || lower.includes("already in use")) {

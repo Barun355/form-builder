@@ -2,6 +2,7 @@ import { and, db, desc, eq, sql } from "@repo/database";
 import { formTable } from "@repo/database/models/form";
 import { formSubmissionsTable } from "@repo/database/models/form-submissions";
 
+import { getOwnerVisibility, visibilityFilter } from "../plan-gating";
 import {
   dashboardStatsInput,
   recentSubmissionsInput,
@@ -34,6 +35,13 @@ class DashboardService {
   ): Promise<DashboardStatsOutputType> {
     const { requestedBy } = await dashboardStatsInput.parseAsync(payload);
 
+    // Visibility cap: Free users past 100/month see only the latest 100
+    // of current month. Pro/Business uncapped (cutoffAt === null).
+    const visibility = await getOwnerVisibility(requestedBy);
+    const visFrag = visibility.cutoffAt
+      ? sql`AND (fs.submitted_at < ${visibility.startOfMonth.toISOString()} OR fs.submitted_at >= ${visibility.cutoffAt.toISOString()})`
+      : sql``;
+
     const rows = await db.execute(sql`
       SELECT
         (SELECT COUNT(*)::int FROM forms
@@ -59,6 +67,7 @@ class DashboardService {
             AND f.is_deleted = false
             AND fs.is_deleted = false
             AND fs.status = 'completed'
+            ${visFrag}
         ) AS total_submissions,
 
         (SELECT COUNT(*)::int FROM form_submissions fs
@@ -68,6 +77,7 @@ class DashboardService {
             AND fs.is_deleted = false
             AND fs.status = 'completed'
             AND fs.submitted_at >= NOW() - INTERVAL '30 days'
+            ${visFrag}
         ) AS submissions_current_30d,
 
         (SELECT COUNT(*)::int FROM form_submissions fs
@@ -78,6 +88,7 @@ class DashboardService {
             AND fs.status = 'completed'
             AND fs.submitted_at >= NOW() - INTERVAL '60 days'
             AND fs.submitted_at < NOW() - INTERVAL '30 days'
+            ${visFrag}
         ) AS submissions_prior_30d,
 
         (SELECT COUNT(*)::int FROM form_submissions fs
@@ -87,6 +98,7 @@ class DashboardService {
             AND fs.is_deleted = false
             AND fs.status = 'completed'
             AND fs.submitted_at >= NOW() - INTERVAL '7 days'
+            ${visFrag}
         ) AS submissions_current_7d,
 
         (SELECT COUNT(*)::int FROM form_submissions fs
@@ -97,6 +109,7 @@ class DashboardService {
             AND fs.status = 'completed'
             AND fs.submitted_at >= NOW() - INTERVAL '14 days'
             AND fs.submitted_at < NOW() - INTERVAL '7 days'
+            ${visFrag}
         ) AS submissions_prior_7d,
 
         (SELECT COUNT(*)::int FROM form_submissions fs
@@ -174,6 +187,12 @@ class DashboardService {
         submissionsCurrent7d,
         submissionsPrior7d,
       ),
+      // Plan-cap data used by <UpgradeBanner /> on the dashboard. Always
+      // returns truthful uncapped monthlyTotal so users know what they're
+      // missing — only the visible counts above are gated.
+      monthlyTotalSubmissions: visibility.monthlyTotal,
+      monthlyLockedCount: visibility.lockedCount,
+      plan: visibility.plan,
     };
   }
 
@@ -185,6 +204,11 @@ class DashboardService {
     payload: SubmissionTrendInputType,
   ): Promise<SubmissionTrendOutputType> {
     const { requestedBy, days } = await submissionTrendInput.parseAsync(payload);
+
+    const visibility = await getOwnerVisibility(requestedBy);
+    const trendVisFrag = visibility.cutoffAt
+      ? sql`AND (fs.submitted_at < ${visibility.startOfMonth.toISOString()} OR fs.submitted_at >= ${visibility.cutoffAt.toISOString()})`
+      : sql``;
 
     const rows = await db.execute(sql`
       WITH days AS (
@@ -206,6 +230,7 @@ class DashboardService {
           SELECT id FROM forms
           WHERE created_by = ${requestedBy} AND is_deleted = false
         )
+        ${trendVisFrag}
       GROUP BY days.date
       ORDER BY days.date ASC
     `);
@@ -229,6 +254,8 @@ class DashboardService {
     const { requestedBy, limit } =
       await recentSubmissionsInput.parseAsync(payload);
 
+    const visibility = await getOwnerVisibility(requestedBy);
+
     const rows = await db
       .select({
         id: formSubmissionsTable.id,
@@ -248,6 +275,7 @@ class DashboardService {
           eq(formTable.isDeleted, false),
           eq(formSubmissionsTable.isDeleted, false),
           eq(formSubmissionsTable.status, "completed"),
+          visibilityFilter(visibility),
         ),
       )
       .orderBy(desc(formSubmissionsTable.submittedAt))

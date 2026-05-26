@@ -22,6 +22,7 @@ import {
 import { cn } from "~/lib/utils";
 
 import { DashboardShell } from "~/components/dashboard-shell";
+import { PlanGate } from "~/components/plan-gate";
 import { StatusChip } from "~/components/status-chip";
 import { useForm } from "~/hooks/form";
 import {
@@ -87,6 +88,7 @@ export default function FormAnalyticsPage({
 
   return (
     <DashboardShell>
+      <PlanGate feature="analytics">
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -189,6 +191,7 @@ export default function FormAnalyticsPage({
           </div>
         </div>
       </div>
+      </PlanGate>
     </DashboardShell>
   );
 }

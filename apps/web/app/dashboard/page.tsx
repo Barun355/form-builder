@@ -12,6 +12,7 @@ import { RecentSubmissionsCard } from "~/components/dashboard/recent-submissions
 import { RefreshButton } from "~/components/dashboard/refresh-button";
 import { StatCards } from "~/components/dashboard/stat-cards";
 import { SubmissionTrendChart } from "~/components/dashboard/submission-trend-chart";
+import { UpgradeBanner } from "~/components/dashboard/upgrade-banner";
 import { useDashboardStats } from "~/hooks/dashboard";
 import { useUser } from "~/hooks/auth";
 
@@ -53,6 +54,9 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
+                {/* Plan-cap banner — only renders for over-cap Free users */}
+                <UpgradeBanner />
+
                 {/* KPI cards */}
                 <div className="px-4 lg:px-6">
                   <StatCards />

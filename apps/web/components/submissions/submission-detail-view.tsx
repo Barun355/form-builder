@@ -1,92 +1,37 @@
 "use client";
 
 import * as React from "react";
-import { IconAlertTriangle } from "@tabler/icons-react";
 
 import { StatusChip } from "~/components/status-chip";
-import { Skeleton } from "~/components/ui/skeleton";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "~/components/ui/sheet";
-import { useFormSubmission } from "~/hooks/form-submissions";
 import type {
   FormSchemaI,
   FieldSchemaI,
 } from "@repo/database/models/form-versions";
-
-type Props = {
-  submissionId: string | null;
-  onOpenChange: (open: boolean) => void;
-};
 
 const dateTimeFmt = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
 });
 
-export function SubmissionDrawer({ submissionId, onOpenChange }: Props) {
-  const { data, isLoading, isError, error } = useFormSubmission(
-    submissionId ?? undefined,
-  );
+type SubmissionDetail = {
+  id: string;
+  status: "started" | "completed";
+  startedAt: string | Date;
+  submittedAt: string | Date | null;
+  data?: unknown;
+  meta?: unknown;
+  version: { id: string; version: number; schema?: unknown };
+};
 
-  const open = Boolean(submissionId);
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle>Submission</SheetTitle>
-          <SheetDescription>
-            {data?.id ? (
-              <span className="font-mono text-body-sm">
-                {data.id.slice(0, 8)}
-              </span>
-            ) : (
-              "Loading details..."
-            )}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="px-4 pb-6 space-y-6 overflow-y-auto">
-          {isLoading ? (
-            <DrawerSkeleton />
-          ) : isError ? (
-            <div className="flex flex-col items-center justify-center text-center gap-3 py-10">
-              <IconAlertTriangle className="size-6 text-destructive" />
-              <p className="text-body-sm text-destructive">
-                {error?.message ?? "Failed to load submission"}
-              </p>
-            </div>
-          ) : data ? (
-            <DrawerBody data={data} />
-          ) : null}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function DrawerBody({
-  data,
-}: {
-  data: {
-    id: string;
-    status: "started" | "completed";
-    startedAt: string | Date;
-    submittedAt: string | Date | null;
-    data?: unknown;
-    meta?: unknown;
-    version: { id: string; version: number; schema?: unknown };
-  };
-}) {
-  const submission = data;
-  const schema = submission.version.schema as FormSchemaI;
-  const values = (submission.data ?? {}) as Record<string, unknown>;
-  const meta = (submission.meta ?? {}) as Record<string, string | undefined>;
+/**
+ * Pure presentational view of a single submission. Used by the dedicated
+ * submission detail page. Data fetching happens at the page level — this
+ * component just renders.
+ */
+export function SubmissionDetailView({ data }: { data: SubmissionDetail }) {
+  const schema = data.version.schema as FormSchemaI;
+  const values = (data.data ?? {}) as Record<string, unknown>;
+  const meta = (data.meta ?? {}) as Record<string, string | undefined>;
 
   const fieldsBySection = React.useMemo(() => {
     const fieldsById = new Map(schema.fields.map((f) => [f.id, f]));
@@ -105,12 +50,10 @@ function DrawerBody({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <StatusChip
-          status={
-            submission.status === "completed" ? "published" : "draft"
-          }
+          status={data.status === "completed" ? "published" : "draft"}
         />
         <span className="text-caps uppercase text-muted-foreground">
-          v{submission.version.version}
+          v{data.version.version}
         </span>
       </div>
 
@@ -118,14 +61,14 @@ function DrawerBody({
         <div>
           <dt className="text-muted-foreground">Started</dt>
           <dd className="text-foreground">
-            {dateTimeFmt.format(new Date(submission.startedAt))}
+            {dateTimeFmt.format(new Date(data.startedAt))}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Submitted</dt>
           <dd className="text-foreground">
-            {submission.submittedAt
-              ? dateTimeFmt.format(new Date(submission.submittedAt))
+            {data.submittedAt
+              ? dateTimeFmt.format(new Date(data.submittedAt))
               : "—"}
           </dd>
         </div>
@@ -211,24 +154,4 @@ function formatValue(field: FieldSchemaI, value: unknown): string {
     if (opt) return opt.label;
   }
   return String(value);
-}
-
-function DrawerSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-6 w-24 rounded-full" />
-      <div className="grid grid-cols-2 gap-3">
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-      </div>
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-1.5">
-            <Skeleton className="h-3 w-32" />
-            <Skeleton className="h-5 w-3/4" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }

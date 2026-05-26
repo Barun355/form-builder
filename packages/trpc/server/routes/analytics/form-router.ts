@@ -1,5 +1,5 @@
 import { analyticsService } from "../../services";
-import { protectedProcedure, router } from "../../trpc";
+import { paidProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
 import { badRequest, forbidden, notFound } from "../../utils/errors";
 import {
@@ -26,7 +26,7 @@ function mapServiceError(err: unknown): never {
 }
 
 export const formAnalyticsRouter = router({
-  kpis: protectedProcedure
+  kpis: paidProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -50,7 +50,7 @@ export const formAnalyticsRouter = router({
       }
     }),
 
-  trend: protectedProcedure
+  trend: paidProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -73,7 +73,7 @@ export const formAnalyticsRouter = router({
       }
     }),
 
-  audience: protectedProcedure
+  audience: paidProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -97,7 +97,7 @@ export const formAnalyticsRouter = router({
       }
     }),
 
-  fields: protectedProcedure
+  fields: paidProcedure
     .meta({
       openapi: {
         method: "GET",
