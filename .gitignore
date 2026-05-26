@@ -4,3 +4,10 @@ node_modules
 
 .env
 .env.local
+
+.turbo
+dist
+build
+coverage
+logs
+*.log
