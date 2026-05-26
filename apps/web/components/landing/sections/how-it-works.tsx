@@ -1,4 +1,15 @@
+"use client";
+
 import { IconChartBar, IconCursorText, IconLink } from "@tabler/icons-react";
+import { m } from "framer-motion";
+
+import { SectionHeader } from "~/components/landing/motion/section-header";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+const stepVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
+};
 
 const STEPS = [
   {
@@ -25,27 +36,31 @@ export function HowItWorks() {
   return (
     <section className="bg-muted/30 border-y border-border py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <p className="text-caps uppercase text-primary text-xs tracking-wider font-semibold">
-            How it works
-          </p>
-          <h2 className="mt-2 text-display-md text-foreground tracking-tight">
-            Three steps. Zero learning curve.
-          </h2>
-        </div>
+        <SectionHeader
+          align="center"
+          eyebrow="How it works"
+          title="Three steps. Zero learning curve."
+          titleClassName="text-display-md"
+        />
 
         <div className="mt-16 relative">
-          {/* Dashed line below the number circles, connecting their bottoms.
-              top-20 = ~80px from grid top (mt-6 padding + size-14 circle). */}
+          {/* Dashed line below the number circles, connecting their bottoms. */}
           <div
             aria-hidden
             className="hidden md:block absolute top-20 left-[16.7%] right-[16.7%] border-t-2 border-dashed border-primary/20"
           />
 
-          <div className="relative grid gap-8 md:grid-cols-3">
+          <m.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-10% 0px" }}
+            variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+            className="relative grid gap-8 md:grid-cols-3"
+          >
             {STEPS.map(({ n, title, body, Icon }) => (
-              <div
+              <m.div
                 key={n}
+                variants={stepVariants}
                 className="relative bg-card border border-border rounded-2xl p-6 text-center transition-all duration-200 hover:border-primary/30 hover:-translate-y-0.5"
               >
                 <div className="mx-auto size-14 rounded-full bg-primary/10 ring-4 ring-card flex items-center justify-center text-primary font-mono text-h3 font-semibold tabular-nums">
@@ -58,9 +73,9 @@ export function HowItWorks() {
                 <p className="mt-2 text-body text-muted-foreground max-w-xs mx-auto">
                   {body}
                 </p>
-              </div>
+              </m.div>
             ))}
-          </div>
+          </m.div>
         </div>
       </div>
     </section>

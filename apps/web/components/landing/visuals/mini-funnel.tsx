@@ -1,4 +1,11 @@
+"use client";
+
+import { m } from "framer-motion";
+
+import { CountUp } from "~/components/landing/motion/count-up";
 import { cn } from "~/lib/utils";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function MiniFunnel({ className }: { className?: string }) {
   const started = 1280;
@@ -17,12 +24,12 @@ export function MiniFunnel({ className }: { className?: string }) {
           Funnel · last 7d
         </span>
         <span className="text-body-sm text-success font-medium tabular-nums">
-          {pct}%
+          <CountUp to={pct} suffix="%" />
         </span>
       </div>
-      <Bar label="Started" value={started} max={started} tone="muted" />
-      <Bar label="Reached page 2" value={reached} max={started} tone="info" />
-      <Bar label="Completed" value={completed} max={started} tone="primary" />
+      <Bar label="Started" value={started} max={started} tone="muted" delay={0.2} />
+      <Bar label="Reached page 2" value={reached} max={started} tone="info" delay={0.32} />
+      <Bar label="Completed" value={completed} max={started} tone="primary" delay={0.44} />
     </div>
   );
 }
@@ -32,11 +39,13 @@ function Bar({
   value,
   max,
   tone,
+  delay,
 }: {
   label: string;
   value: number;
   max: number;
   tone: "muted" | "info" | "primary";
+  delay: number;
 }) {
   const pct = Math.round((value / max) * 100);
   const fill =
@@ -50,13 +59,17 @@ function Bar({
       <div className="flex items-center justify-between text-body-sm">
         <span className="text-foreground">{label}</span>
         <span className="text-muted-foreground tabular-nums">
-          {value.toLocaleString()}
+          <CountUp to={value} />
         </span>
       </div>
       <div className="mt-1.5 h-2 rounded-full bg-muted overflow-hidden">
-        <div
-          className={cn("h-full rounded-full transition-all", fill)}
-          style={{ width: `${pct}%` }}
+        <m.div
+          className={cn("h-full rounded-full", fill)}
+          style={{ width: `${pct}%`, transformOrigin: "left center" }}
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true, margin: "-10% 0px" }}
+          transition={{ duration: 0.9, ease: EASE, delay }}
         />
       </div>
     </div>

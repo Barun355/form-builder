@@ -1,3 +1,7 @@
+"use client";
+
+import { m } from "framer-motion";
+
 import { cn } from "~/lib/utils";
 
 const ROWS = [
@@ -5,6 +9,12 @@ const ROWS = [
   { initials: "JL", name: "Jordan L.", role: "Bug report", time: "2m ago", color: "bg-info/15 text-info" },
   { initials: "AS", name: "Anu S.", role: "Newsletter", time: "5m ago", color: "bg-success/15 text-success" },
 ];
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+const rowVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
+};
 
 export function MiniSubmissionsList({ className }: { className?: string }) {
   return (
@@ -23,9 +33,20 @@ export function MiniSubmissionsList({ className }: { className?: string }) {
           Live
         </span>
       </div>
-      <div className="divide-y divide-border">
+      {/* Rows stream in top-down, simulating live submissions landing */}
+      <m.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-10% 0px" }}
+        variants={{ visible: { transition: { staggerChildren: 0.12, delayChildren: 0.2 } } }}
+        className="divide-y divide-border"
+      >
         {ROWS.map((r) => (
-          <div key={r.name} className="flex items-center gap-3 px-4 py-3">
+          <m.div
+            key={r.name}
+            variants={rowVariants}
+            className="flex items-center gap-3 px-4 py-3"
+          >
             <div
               className={cn(
                 "size-8 rounded-full flex items-center justify-center text-body-sm font-medium tabular-nums",
@@ -43,9 +64,9 @@ export function MiniSubmissionsList({ className }: { className?: string }) {
             <span className="text-body-sm text-muted-foreground tabular-nums">
               {r.time}
             </span>
-          </div>
+          </m.div>
         ))}
-      </div>
+      </m.div>
     </div>
   );
 }

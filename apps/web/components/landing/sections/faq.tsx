@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "~/components/ui/accordion";
+import { SectionHeader } from "~/components/landing/motion/section-header";
 
 const FAQS = [
   {
@@ -32,14 +33,12 @@ export function Faq() {
   return (
     <section id="faq" className="py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <p className="text-caps uppercase text-primary text-xs tracking-wider font-semibold">
-            FAQ
-          </p>
-          <h2 className="mt-2 text-display-md text-foreground tracking-tight">
-            Questions, answered.
-          </h2>
-        </div>
+        <SectionHeader
+          align="center"
+          eyebrow="FAQ"
+          title="Questions, answered."
+          titleClassName="text-display-md"
+        />
 
         <Accordion type="single" collapsible className="mt-10 space-y-2">
           {FAQS.map((f) => (

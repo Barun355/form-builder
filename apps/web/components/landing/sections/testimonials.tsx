@@ -1,7 +1,17 @@
+"use client";
+
 import { Quote } from "lucide-react";
+import { m } from "framer-motion";
 
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { SectionHeader } from "~/components/landing/motion/section-header";
 import { cn } from "~/lib/utils";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+const cardVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
+};
 
 const QUOTES = [
   {
@@ -37,19 +47,24 @@ export function Testimonials() {
   return (
     <section className="py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <p className="text-caps uppercase text-primary text-xs tracking-wider font-semibold">
-            Loved by builders
-          </p>
-          <h2 className="mt-2 text-display-md text-foreground tracking-tight">
-            Real teams, real outcomes.
-          </h2>
-        </div>
+        <SectionHeader
+          align="center"
+          eyebrow="Loved by builders"
+          title="Real teams, real outcomes."
+          titleClassName="text-display-md"
+        />
 
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
+        <m.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-10% 0px" }}
+          variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+          className="mt-12 grid gap-5 md:grid-cols-3"
+        >
           {QUOTES.map((q) => (
-            <div
+            <m.div
               key={q.name}
+              variants={cardVariants}
               className="rounded-2xl border border-border bg-card p-6 flex flex-col"
             >
               <Quote className="size-5 text-primary/60 mb-3" />
@@ -71,9 +86,9 @@ export function Testimonials() {
                   </p>
                 </div>
               </div>
-            </div>
+            </m.div>
           ))}
-        </div>
+        </m.div>
       </div>
     </section>
   );

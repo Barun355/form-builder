@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
 import type {
   FieldSchemaI,
   FormSchemaI,
-  PageSchemaI,
   SectionSchemaI,
 } from "@repo/database/models/form-versions";
 
@@ -185,10 +183,11 @@ export function FormRenderer({
           ) : null}
         </div>
         {!readOnly ? (
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && isLast ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : null}
+          <Button
+            type="submit"
+            loading={isSubmitting && isLast}
+            disabled={isSubmitting && !isLast}
+          >
             {isLast ? submitLabel : "Next"}
           </Button>
         ) : null}

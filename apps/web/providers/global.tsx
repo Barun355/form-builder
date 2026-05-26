@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
 import React, { useState } from "react";
 import { Toaster } from "~/components/ui/sonner";
 
@@ -33,7 +34,15 @@ export const GlobalProviders: React.FC<{ children: React.ReactNode }> = ({ child
         storageKey="simpleform-theme"
       >
         <trpc.Provider queryClient={queryClient} client={trpcClient}>
-          {children}
+          {/* MotionConfig respects OS "reduce motion" preference for every
+              framer-motion animation. LazyMotion + domAnimation ships the
+              ~15kb subset (no drag/layout/3d). `strict` forces `m.div`
+              instead of `motion.div`, enforcing the lazy bundle. */}
+          <MotionConfig reducedMotion="user">
+            <LazyMotion features={domAnimation} strict>
+              {children}
+            </LazyMotion>
+          </MotionConfig>
           <Toaster />
         </trpc.Provider>
       </NextThemesProvider>

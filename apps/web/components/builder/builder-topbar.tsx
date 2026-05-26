@@ -20,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Input } from "~/components/ui/input";
-import { Loader2 } from "lucide-react";
 
 import { ConfirmDialog } from "~/components/confirm-dialog";
 import { StatusChip } from "~/components/status-chip";
@@ -189,10 +188,11 @@ export function BuilderTopbar({ state, onPreview }: Props) {
         <Button
           size="sm"
           variant={isDirty ? "default" : "outline"}
-          disabled={!isDirty || isSaving}
+          disabled={!isDirty}
+          loading={isSaving}
+          loadingText="Saving…"
           onClick={handleSave}
         >
-          {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : null}
           Save
         </Button>
 

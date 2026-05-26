@@ -1,51 +1,62 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { cn } from "~/lib/utils"
-import { Button } from "~/components/ui/button"
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+import { cn } from "~/lib/utils";
+import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card"
+} from "~/components/ui/card";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field"
-import { Input } from "~/components/ui/input"
-import { useLogin } from "~/hooks/auth"
-import { useRouter } from "next/navigation"
+} from "~/components/ui/field";
+import { Input } from "~/components/ui/input";
+import { useLogin } from "~/hooks/auth";
 
 type LoginFormValues = {
-  email: string
-  password: string
-}
+  email: string;
+  password: string;
+};
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter()
-  const { register, handleSubmit } = useForm<LoginFormValues>()
+  const router = useRouter();
+  const {
+    register,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<LoginFormValues>();
 
-  const { loginUserWithEmailAndPasswordAsync } = useLogin()
+  const { loginUserWithEmailAndPasswordAsync } = useLogin();
 
   const onSubmit = async (values: LoginFormValues) => {
-    console.log(values)
-
-    const { id } = await loginUserWithEmailAndPasswordAsync({
-      email: values.email,
-      password: values.password
-    })
-
-    console.log(`User logged in with ${id}`)
-    router.push("/dashboard")
-
-  }
+    try {
+      await loginUserWithEmailAndPasswordAsync({
+        email: values.email,
+        password: values.password,
+      });
+      toast.success("Welcome back");
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Sign-in failed. Please check your email and password.";
+      toast.error(message);
+    }
+  };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -65,7 +76,9 @@ export function LoginForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
+                  autoComplete="email"
                   required
+                  disabled={isSubmitting}
                   {...register("email")}
                 />
               </Field>
@@ -73,7 +86,7 @@ export function LoginForm({
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
                   <a
-                    href="#"
+                    href="/forgot-password"
                     className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                   >
                     Forgot your password?
@@ -82,17 +95,29 @@ export function LoginForm({
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   required
+                  disabled={isSubmitting}
                   {...register("password")}
                 />
               </Field>
               <Field>
-                <Button type="submit">Login</Button>
-                <Button variant="outline" type="button">
+                <Button
+                  type="submit"
+                  loading={isSubmitting}
+                  loadingText="Signing in…"
+                >
+                  Login
+                </Button>
+                <Button
+                  variant="outline"
+                  type="button"
+                  disabled={isSubmitting}
+                >
                   Login with Google
                 </Button>
                 <FieldDescription className="text-center">
-                  Don&apos;t have an account? <a href="#">Sign up</a>
+                  Don&apos;t have an account? <a href="/signup">Sign up</a>
                 </FieldDescription>
               </Field>
             </FieldGroup>
@@ -100,5 +125,5 @@ export function LoginForm({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

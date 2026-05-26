@@ -118,8 +118,8 @@ export function CreateFormDialog() {
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Creating..." : "Create"}
+            <Button type="submit" loading={isPending} loadingText="Creating…">
+              Create
             </Button>
           </DialogFooter>
         </form>

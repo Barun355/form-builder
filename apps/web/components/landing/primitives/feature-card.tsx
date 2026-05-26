@@ -1,3 +1,7 @@
+"use client";
+
+import * as React from "react";
+
 import { cn } from "~/lib/utils";
 
 type Size = "hero" | "medium" | "wide";
@@ -24,17 +28,47 @@ export function FeatureCard({
   tinted?: boolean;
   className?: string;
 }) {
+  // Spotlight cursor: write x/y CSS vars on the card so a child element
+  // can render a radial gradient that follows the cursor. Per research,
+  // the one "extra" Linear / Resend / Cal.com still ship in 2026.
+  // Implemented as plain DOM mutation (no React state) — runs at 60fps,
+  // doesn't trigger re-renders.
+  const ref = React.useRef<HTMLDivElement>(null);
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--spot-x", `${e.clientX - r.left}px`);
+    el.style.setProperty("--spot-y", `${e.clientY - r.top}px`);
+  };
+
   return (
     <div
+      ref={ref}
+      onMouseMove={onMouseMove}
       className={cn(
         "group relative overflow-hidden rounded-2xl border border-border transition-all duration-200 ease-out",
-        "hover:shadow-md hover:-translate-y-0.5",
+        "hover:border-primary/30 hover:shadow-md",
         tinted ? "bg-primary/4" : "bg-card",
         size === "hero" ? "p-8 sm:p-10" : "p-6",
         className,
       )}
     >
-      <div className="flex flex-col h-full gap-5">
+      {/* Spotlight layer — fades in on hover, follows cursor via CSS vars.
+          Uses theme-aware --spotlight token so the glow reads as "visible
+          but subtle" against both white and dark card surfaces. Tighter
+          radius (320px vs the old 400px) gives the glow a defined focal
+          point instead of a diffuse wash. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{
+          background:
+            "radial-gradient(320px circle at var(--spot-x, 50%) var(--spot-y, 50%), var(--spotlight), transparent 65%)",
+        }}
+      />
+
+      <div className="relative flex flex-col h-full gap-5">
         {/* Header — fixed-ish height so the visual zone is predictable */}
         <div className="flex-none">
           {icon && (
@@ -67,9 +101,7 @@ export function FeatureCard({
               fill the slot via `[&>*]:h-full`. Otherwise the fixed-height
               canvas would float at the bottom with empty space above.
             - Other cells: visual is bottom-anchored at its intrinsic
-              height — `overflow-hidden` clips any overflow at the top edge.
-            Note: no mask gradient. With bottom-anchored content, a bottom
-            fade would erase exactly the content we want visible. */}
+              height — `overflow-hidden` clips any overflow at the top edge. */}
         {visual && (size === "hero" ? (
           <div
             className={cn(

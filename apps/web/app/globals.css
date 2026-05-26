@@ -231,6 +231,10 @@
   --canvas-grid: oklch(0.918 0.005 300);
   --drop-zone: oklch(0.92 0.07 280 / 60%);
   --drop-zone-border: oklch(0.55 0.22 280);
+
+  /* ─── Bento spotlight (cursor-tracking radial glow) ──────────────
+     Darker primary tint for visibility on white card surfaces. */
+  --spotlight: oklch(0.55 0.22 280 / 0.12);
 }
 
 /* ============================================================================
@@ -302,6 +306,11 @@
   --canvas-grid: oklch(0.265 0.006 300);
   --drop-zone: oklch(0.30 0.10 280 / 50%);
   --drop-zone-border: oklch(0.72 0.22 280);
+
+  /* In dark mode the spotlight uses the lifted primary (matches --primary
+     dark variant) at higher alpha — gives the glow real presence against
+     dark surfaces while staying within the brand. */
+  --spotlight: oklch(0.72 0.22 280 / 0.18);
 }
 
 /* ============================================================================

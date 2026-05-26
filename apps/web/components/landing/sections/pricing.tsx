@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { Check, Minus } from "lucide-react";
+import { AnimatePresence, m } from "framer-motion";
 
 import { Button } from "~/components/ui/button";
+import { SectionHeader } from "~/components/landing/motion/section-header";
 import { cn } from "~/lib/utils";
 
 type Tier = {
@@ -78,46 +80,31 @@ export function Pricing() {
   return (
     <section id="pricing" className="bg-muted/30 border-y border-border py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <p className="text-caps uppercase text-primary text-xs tracking-wider font-semibold">
-            Pricing
-          </p>
-          <h2 className="mt-2 text-display-md text-foreground tracking-tight">
-            Free forever. Pay when you scale.
-          </h2>
-          <p className="mt-3 text-body-lg text-muted-foreground">
-            No credit card to start. Switch plans anytime — bill stops the day
-            you cancel.
-          </p>
+        <SectionHeader
+          align="center"
+          eyebrow="Pricing"
+          title="Free forever. Pay when you scale."
+          subtitle="No credit card to start. Switch plans anytime — bill stops the day you cancel."
+          titleClassName="text-display-md"
+        />
 
-          <div className="mt-8 inline-flex items-center bg-muted rounded-full p-1 border border-border">
-            <button
-              type="button"
+        <div className="mt-8 flex justify-center">
+          <div className="inline-flex items-center bg-muted rounded-full p-1 border border-border relative">
+            <ToggleButton
+              active={interval === "monthly"}
               onClick={() => setInterval("monthly")}
-              className={cn(
-                "px-4 py-1.5 rounded-full text-body-sm font-medium transition-colors",
-                interval === "monthly"
-                  ? "bg-card shadow-xs text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
             >
               Monthly
-            </button>
-            <button
-              type="button"
+            </ToggleButton>
+            <ToggleButton
+              active={interval === "annual"}
               onClick={() => setInterval("annual")}
-              className={cn(
-                "px-4 py-1.5 rounded-full text-body-sm font-medium transition-colors inline-flex items-center gap-2",
-                interval === "annual"
-                  ? "bg-card shadow-xs text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
             >
               Annual
               <span className="text-[10px] uppercase tracking-wider text-success font-semibold">
                 -20%
               </span>
-            </button>
+            </ToggleButton>
           </div>
         </div>
 
@@ -152,18 +139,46 @@ export function Pricing() {
                   {tier.description}
                 </p>
                 <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-display-md text-foreground tabular-nums tracking-tight">
-                    ${price}
-                  </span>
+                  {/* Price swap — popLayout slides old out / new in. Per
+                      research: NOT a count-up tween (gimmicky for a
+                      2-value swap), just a 180ms slide-fade. */}
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <m.span
+                      key={`${tier.name}-${price}`}
+                      initial={{ y: 8, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -8, opacity: 0 }}
+                      transition={{
+                        duration: 0.18,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                      className="text-display-md text-foreground tabular-nums tracking-tight inline-block"
+                    >
+                      ${price}
+                    </m.span>
+                  </AnimatePresence>
                   <span className="text-body-sm text-muted-foreground">
                     {tier.monthly > 0 ? `/mo · per ${tier.unit}` : `· ${tier.unit}`}
                   </span>
                 </div>
                 {/* Reserve space for the annual note so all three tier
                     cards align their CTAs at the same y-position. */}
-                <p className="mt-1 text-body-sm text-muted-foreground min-h-5">
-                  {annualNote}
-                </p>
+                <div className="mt-1 min-h-5">
+                  <AnimatePresence mode="wait" initial={false}>
+                    {annualNote && (
+                      <m.p
+                        key={annualNote}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18 }}
+                        className="text-body-sm text-muted-foreground"
+                      >
+                        {annualNote}
+                      </m.p>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 <Button
                   asChild
@@ -203,5 +218,43 @@ export function Pricing() {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Toggle button with a shared-layout active pill. The active background
+ * uses `layoutId` so framer-motion smoothly slides it between the two
+ * buttons when the selection changes. The most-noticed micro-interaction
+ * on the page.
+ */
+function ToggleButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative px-4 py-1.5 rounded-full text-body-sm font-medium transition-colors inline-flex items-center gap-2 z-10",
+        active
+          ? "text-foreground"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {active && (
+        <m.span
+          layoutId="pricing-toggle-active"
+          className="absolute inset-0 rounded-full bg-card shadow-xs -z-10"
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        />
+      )}
+      {children}
+    </button>
   );
 }

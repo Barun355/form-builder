@@ -1,8 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, FileText } from "lucide-react";
+import { m } from "framer-motion";
 
+import { SectionHeader } from "~/components/landing/motion/section-header";
 import { templates, type TemplateAccent } from "~/lib/templates";
 import { cn } from "~/lib/utils";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+const cardVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
+};
 
 const ACCENT_CLASSES: Record<TemplateAccent, string> = {
   primary: "bg-primary/10 text-primary border-primary/20",
@@ -17,17 +27,12 @@ export function Templates() {
     <section id="templates" className="py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-          <div className="max-w-2xl">
-            <p className="text-caps uppercase text-primary text-xs tracking-wider font-semibold">
-              Templates
-            </p>
-            <h2 className="mt-2 text-display-md text-foreground tracking-tight">
-              Don&apos;t start from scratch.
-            </h2>
-            <p className="mt-3 text-body-lg text-muted-foreground">
-              Ten battle-tested templates. Pick one, tweak it, ship it.
-            </p>
-          </div>
+          <SectionHeader
+            eyebrow="Templates"
+            title={<>Don&apos;t start from scratch.</>}
+            subtitle="Ten battle-tested templates. Pick one, tweak it, ship it."
+            titleClassName="text-display-md"
+          />
           <Link
             href="/signup"
             className="inline-flex items-center text-body-sm text-primary hover:underline"
@@ -37,12 +42,18 @@ export function Templates() {
           </Link>
         </div>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <m.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-10% 0px" }}
+          variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
+          className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {templates.map((t) => (
+            <m.div key={t.slug} variants={cardVariants}>
             <Link
-              key={t.slug}
               href={`/signup?template=${t.slug}`}
-              className="group flex flex-col rounded-2xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              className="group flex flex-col rounded-2xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 h-full"
             >
               <div className="flex items-center justify-between mb-3">
                 <span
@@ -86,8 +97,9 @@ export function Templates() {
                 <ArrowRight className="size-3.5 ml-1 transition-transform group-hover:translate-x-0.5" />
               </div>
             </Link>
+            </m.div>
           ))}
-        </div>
+        </m.div>
       </div>
     </section>
   );

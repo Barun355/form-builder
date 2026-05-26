@@ -1,3 +1,5 @@
+"use client";
+
 import {
   IconAbc,
   IconAt,
@@ -8,8 +10,15 @@ import {
   IconList,
   IconSquare,
 } from "@tabler/icons-react";
+import { m } from "framer-motion";
 
 import { cn } from "~/lib/utils";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+const fieldVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE } },
+};
 
 const PALETTE = [
   { Icon: IconAbc, label: "Text" },
@@ -75,8 +84,9 @@ export function MiniBuilderCanvas({
           ))}
         </div>
 
-        {/* Canvas */}
-        <div
+        {/* Canvas — field blocks stream in top-down, simulating
+            dragging-onto-canvas. Stagger 80ms, starts 200ms after parent. */}
+        <m.div
           className="p-5 space-y-3"
           style={{
             backgroundImage:
@@ -84,12 +94,18 @@ export function MiniBuilderCanvas({
             backgroundSize: "16px 16px",
             backgroundColor: "var(--canvas)",
           }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-10% 0px" }}
+          variants={{
+            visible: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
+          }}
         >
           <FieldBlockMock label="Your name" type="Text" required />
           <FieldBlockMock label="Work email" type="Email" required />
           <FieldBlockMock label="Overall satisfaction" type="Single choice" dragging />
           <FieldBlockMock label="What should we improve?" type="Long text" />
-        </div>
+        </m.div>
       </div>
     </div>
   );
@@ -107,7 +123,8 @@ function FieldBlockMock({
   dragging?: boolean;
 }) {
   return (
-    <div
+    <m.div
+      variants={fieldVariants}
       className={cn(
         "rounded-lg border bg-card px-3 py-2.5 shadow-xs transition-all",
         dragging
@@ -125,6 +142,6 @@ function FieldBlockMock({
         </span>
       </div>
       <div className="mt-2 h-7 rounded-md border border-dashed border-border bg-background/60" />
-    </div>
+    </m.div>
   );
 }
