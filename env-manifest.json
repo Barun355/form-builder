@@ -1,0 +1,55 @@
+{
+  "$comment": "Single source of truth for environment variables across the monorepo. Defaults below are LOCAL DEV values. Production overrides are gathered interactively by setup.sh when run with --prod (or via BACKEND_URL / FRONTEND_URL env vars). Edit this file when you add a new env var to any Zod schema or t3-env config, then run `bash setup.sh`. The drift checker (`pnpm check:env`) verifies this file matches the schemas in code.",
+  "vars": {
+    "NODE_ENV": {
+      "default": "development",
+      "comment": "development | production | test. Forced to production by setup.sh --prod.",
+      "targets": ["apps/api/.env", "apps/web/.env.local"]
+    },
+    "PORT": {
+      "default": "8000",
+      "comment": "API server port",
+      "targets": ["apps/api/.env"]
+    },
+    "BASE_URL": {
+      "default": "http://localhost:8000",
+      "comment": "API origin (no /api or /trpc suffix). In prod, set to backend URL.",
+      "targets": ["apps/api/.env"]
+    },
+    "CORS_ORIGIN": {
+      "default": "http://localhost:3000",
+      "comment": "Comma-separated allowed origins for credentialed CORS. In prod, set to frontend URL.",
+      "targets": ["apps/api/.env"]
+    },
+    "DATABASE_URL": {
+      "default": "postgresql://postgres:postgres@localhost:5432/typeform",
+      "comment": "Postgres connection string. Stays local-first; override per-environment after setup if needed.",
+      "targets": ["apps/api/.env", "packages/database/.env"]
+    },
+    "JWT_SECRET": {
+      "generate": "random-base64-48",
+      "comment": "JWT signing key. Auto-generated on first setup. Must be >= 32 chars in production.",
+      "targets": ["apps/api/.env"]
+    },
+    "RATE_LIMIT_SUBMISSION_PER_MIN": {
+      "default": "30",
+      "comment": "Per-IP submission start/complete cap, per 60s window",
+      "targets": ["apps/api/.env"]
+    },
+    "LOGGER_LEVEL": {
+      "default": "debug",
+      "comment": "error | warn | info | debug. setup.sh --prod forces 'info'.",
+      "targets": ["apps/api/.env"]
+    },
+    "NEXT_PUBLIC_API_URL": {
+      "default": "http://localhost:8000/trpc",
+      "comment": "tRPC endpoint URL (includes /trpc suffix). Derived from backend URL in prod.",
+      "targets": ["apps/web/.env.local"]
+    },
+    "NEXT_PUBLIC_APP_ORIGIN": {
+      "default": "http://localhost:3000",
+      "comment": "Public web origin. In prod, set to frontend URL.",
+      "targets": ["apps/web/.env.local"]
+    }
+  }
+}
