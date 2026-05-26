@@ -1,0 +1,13 @@
+
+> @repo/database@1.0.0 db:generate /home/localhost/Desktop/web-dev-cohort-2026/hackathon/typeform/packages/database
+> dotenv -- drizzle-kit generate
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/localhost/Desktop/web-dev-cohort-2026/hackathon/typeform/packages/database/drizzle.config.ts'
+4 tables
+users 11 columns 0 indexes 0 fks
+forms 10 columns 2 indexes 2 fks
+form_submissions 11 columns 3 indexes 2 fks
+form_versions 7 columns 1 indexes 1 fks
+
+[✓] Your SQL migration file ➜ drizzle/0002_conscious_enchantress.sql 🚀

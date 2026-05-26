@@ -1,0 +1,164 @@
+[
+  {
+    "slug": "product-satisfaction",
+    "title": "Product Satisfaction Survey",
+    "description": "Help us understand how teams use our SaaS.",
+    "fieldCount": 7,
+    "fieldLabels": [
+      "Your name",
+      "Work email",
+      "Company size",
+      "Overall satisfaction",
+      "How likely to recommend (0–10)",
+      "Most useful features",
+      "What should we improve?"
+    ],
+    "tag": "Survey",
+    "accent": "primary"
+  },
+  {
+    "slug": "event-registration",
+    "title": "Event Registration",
+    "description": "Reserve seats for a conference, meetup, or workshop.",
+    "fieldCount": 7,
+    "fieldLabels": [
+      "Full name",
+      "Email",
+      "Phone",
+      "Company / org",
+      "Ticket type",
+      "Dietary restrictions",
+      "Expected arrival time"
+    ],
+    "tag": "Event",
+    "accent": "warning"
+  },
+  {
+    "slug": "job-application",
+    "title": "Job Application",
+    "description": "Collect candidate background, experience, and links.",
+    "fieldCount": 8,
+    "fieldLabels": [
+      "Full name",
+      "Email",
+      "Phone",
+      "Years of experience",
+      "Expected salary (USD)",
+      "Role applying for",
+      "Portfolio URL",
+      "Why us?"
+    ],
+    "tag": "Hiring",
+    "accent": "info"
+  },
+  {
+    "slug": "bug-report",
+    "title": "Bug Report",
+    "description": "Help engineering reproduce and fix issues quickly.",
+    "fieldCount": 6,
+    "fieldLabels": [
+      "Short title",
+      "Severity",
+      "Reliably reproducible?",
+      "Browser",
+      "Steps to reproduce",
+      "Screenshot URL (optional)"
+    ],
+    "tag": "Internal",
+    "accent": "destructive"
+  },
+  {
+    "slug": "newsletter-signup",
+    "title": "Newsletter Signup",
+    "description": "Pick your topics — one email per week.",
+    "fieldCount": 4,
+    "fieldLabels": [
+      "Email",
+      "First name",
+      "Topics you want",
+      "How often?"
+    ],
+    "tag": "Marketing",
+    "accent": "success"
+  },
+  {
+    "slug": "post-trial-feedback",
+    "title": "Post-trial Feedback",
+    "description": "Understand why trial users converted (or didn't).",
+    "fieldCount": 5,
+    "fieldLabels": [
+      "Overall rating",
+      "Most-used feature",
+      "What was missing?",
+      "Will you continue using us?",
+      "Email (for follow-up)"
+    ],
+    "tag": "Product",
+    "accent": "primary"
+  },
+  {
+    "slug": "restaurant-reservation",
+    "title": "Restaurant Reservation",
+    "description": "Book a table — party size, date, seating preference.",
+    "fieldCount": 8,
+    "fieldLabels": [
+      "Name",
+      "Email",
+      "Phone",
+      "Party size",
+      "Reservation date",
+      "Time",
+      "Seating preference",
+      "Special requests"
+    ],
+    "tag": "Booking",
+    "accent": "warning"
+  },
+  {
+    "slug": "course-enrollment",
+    "title": "Course Enrollment",
+    "description": "Capture student background and track preference.",
+    "fieldCount": 6,
+    "fieldLabels": [
+      "Full name",
+      "Email",
+      "Which course?",
+      "Experience level",
+      "Preferred schedule",
+      "What do you hope to learn?"
+    ],
+    "tag": "Education",
+    "accent": "info"
+  },
+  {
+    "slug": "volunteer-signup",
+    "title": "Volunteer Signup",
+    "description": "Match people to roles for the next community drive.",
+    "fieldCount": 6,
+    "fieldLabels": [
+      "Full name",
+      "Email",
+      "Phone",
+      "Areas you want to help with",
+      "When are you available?",
+      "Skills or relevant experience"
+    ],
+    "tag": "Community",
+    "accent": "success"
+  },
+  {
+    "slug": "contact-us",
+    "title": "Contact Us",
+    "description": "Replies within one business day — drop us a note.",
+    "fieldCount": 5,
+    "fieldLabels": [
+      "Name",
+      "Email",
+      "What's this about?",
+      "Your message",
+      "Preferred contact method"
+    ],
+    "tag": "General",
+    "accent": "info"
+  }
+]

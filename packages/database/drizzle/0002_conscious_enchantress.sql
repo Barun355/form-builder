@@ -1,0 +1,1 @@
+CREATE INDEX "form_submissions_submitted_at_idx" ON "form_submissions" USING btree ("submitted_at");
