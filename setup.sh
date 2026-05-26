@@ -186,6 +186,20 @@ for target in $(all_targets); do
         fi
         emit_var_to_file "$key" "${RESOLVED[$key]}" "$target"
         echo "  + $target ← $key"
+      elif [ "${OVERRIDES[$key]+x}" ]; then
+        # Key exists AND has a prod-override → update in place. This is the
+        # whole point of `--prod`: the URL-derived vars MUST reflect the
+        # values the user just typed in. Generated secrets (JWT_SECRET) and
+        # user-edited values (DATABASE_URL) have no override so they're
+        # preserved.
+        current=$(grep -E "^${key}=" "$target" | head -1 | cut -d= -f2-)
+        want="${RESOLVED[$key]}"
+        if [ "$current" != "$want" ]; then
+          # Use a safe delimiter for sed (URLs contain /).
+          sed -i.bak "s|^${key}=.*|${key}=${want}|" "$target" && rm "${target}.bak"
+          echo "  ↻ $target ← $key (updated)"
+          added_any=1
+        fi
       fi
     done
     if [ "$added_any" -eq 0 ]; then
@@ -249,12 +263,20 @@ echo "────────────────────────�
 # ─── Drift check ─────────────────────────────────────────────────────────
 
 if command -v pnpm >/dev/null 2>&1 && [ -f scripts/check-env-drift.mts ]; then
-  echo ""
-  echo "▸ Checking env drift against Zod schemas…"
-  if pnpm -s check:env; then
-    echo "✓ no drift"
+  # Drift check requires tsx (dev dependency). On a stripped-down prod box
+  # tsx may be absent — treat that as a soft skip, not a failure. Real
+  # drift is caught in dev / CI; prod just consumes the manifest.
+  if command -v tsx >/dev/null 2>&1 || pnpm -s exec tsx --version >/dev/null 2>&1; then
+    echo ""
+    echo "▸ Checking env drift against Zod schemas…"
+    if pnpm -s check:env; then
+      echo "✓ no drift"
+    else
+      echo "✗ drift detected — update env-manifest.json to match (details above)"
+      exit 1
+    fi
   else
-    echo "✗ drift detected — update env-manifest.json to match (details above)"
-    exit 1
+    echo ""
+    echo "▸ Skipping drift check (tsx not installed — fine on prod)"
   fi
 fi

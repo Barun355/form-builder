@@ -13,6 +13,7 @@
     "check:env": "tsx scripts/check-env-drift.mts"
   },
   "devDependencies": {
+    "@types/node": "^22.15.3",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",
     "turbo": "^2.7.2",

@@ -1,34 +1,79 @@
 /**
- * One-shot: create the early-access feedback form on production, then
- * write the resulting public URL into apps/web/lib/feedback-form-url.ts.
+ * One-shot: create the early-access feedback form on whatever environment
+ * apps/api/.env points at, then write the resulting public URL into
+ * apps/web/lib/feedback-form-url.ts.
  *
  * Usage:
  *   pnpm tsx scripts/create-feedback-form.mts
  *
- * Env overrides:
- *   API_BASE    — default https://back-form.dosomething.qzz.io/api
- *   APP_BASE    — default https://simple-form.dosomething.qzz.io
- *   SEED_EMAIL  — default baruntiwary620@gmail.com
- *   SEED_PASSWORD
+ * Resolution order for the two URLs the script needs:
+ *   1. Explicit env vars: API_BASE, APP_BASE  (highest precedence)
+ *   2. apps/api/.env values: BASE_URL → API_BASE, CORS_ORIGIN → APP_BASE
+ *   3. Localhost fallbacks (only if no .env exists)
+ *
+ * The .env-driven path means running `bash setup.sh --prod` on a machine
+ * automatically makes this script create the form against prod and write
+ * the prod URL into the constant. No second env var to remember.
+ *
+ * Other env overrides:
+ *   SEED_EMAIL      — default baruntiwary620@gmail.com
+ *   SEED_PASSWORD   — default 12345678
  */
 
 import { writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(__dirname, "..");
+const TARGET_FILE = resolve(REPO_ROOT, "apps/web/lib/feedback-form-url.ts");
+
+// ─── Load apps/api/.env so we can derive URLs from BASE_URL / CORS_ORIGIN
+// `process.loadEnvFile` (Node 20.6+) populates process.env from the file
+// without overwriting variables already present. So explicit env-var
+// overrides (API_BASE, APP_BASE) still win.
+const API_ENV_PATH = resolve(REPO_ROOT, "apps/api/.env");
+if (existsSync(API_ENV_PATH)) {
+  process.loadEnvFile(API_ENV_PATH);
+}
 
 // REST/OpenAPI mirror, NOT the tRPC native protocol. The tRPC native
 // endpoint at /trpc speaks a wrapped wire format with batching that's
 // awkward to hit from a raw fetch. The /api mount exposes plain JSON
 // POST/GET endpoints — same routes, simpler shape.
 const API_BASE =
-  process.env.API_BASE ?? "http://localhost:8000/api";
+  process.env.API_BASE ??
+  (process.env.BASE_URL ? `${process.env.BASE_URL}/api` : "http://localhost:8000/api");
 const APP_BASE =
-  process.env.APP_BASE ?? "http://localhost:3000";
+  process.env.APP_BASE ??
+  process.env.CORS_ORIGIN ??
+  "http://localhost:3000";
+
+// ─── Environment-mismatch guard ──────────────────────────────────────────
+// Catches the footgun where the form gets created against a remote API
+// but the URL written into the constant points at localhost (or vice
+// versa). Either both are "local" (contain localhost) or both aren't.
+const apiIsLocal = API_BASE.includes("localhost");
+const appIsLocal = APP_BASE.includes("localhost");
+if (apiIsLocal !== appIsLocal) {
+  console.error(
+    "✗ Environment mismatch between API and APP base:\n" +
+      `    API_BASE = ${API_BASE}  (${apiIsLocal ? "local" : "remote"})\n` +
+      `    APP_BASE = ${APP_BASE}  (${appIsLocal ? "local" : "remote"})\n` +
+      "\n" +
+      "  Both must target the same environment, or the URL we write into\n" +
+      "  apps/web/lib/feedback-form-url.ts will point at one env while the\n" +
+      "  form lives on another.\n" +
+      "\n" +
+      "  Fix: update apps/api/.env (BASE_URL + CORS_ORIGIN must match the\n" +
+      "  same environment), or pass explicit API_BASE / APP_BASE env vars.",
+  );
+  process.exit(1);
+}
+
 const EMAIL = process.env.SEED_EMAIL ?? "baruntiwary620@gmail.com";
 const PASSWORD = process.env.SEED_PASSWORD ?? "12345678";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const TARGET_FILE = resolve(__dirname, "../apps/web/lib/feedback-form-url.ts");
 
 // ─── HTTP helper ─────────────────────────────────────────────────────────
 
