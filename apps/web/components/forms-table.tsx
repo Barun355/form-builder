@@ -9,8 +9,8 @@ import {
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconCopy,
   IconDotsVertical,
+  IconShare,
   IconSortAscending,
   IconSortDescending,
 } from "@tabler/icons-react";
@@ -44,8 +44,10 @@ import {
 } from "~/components/ui/table";
 
 import { ConfirmDialog } from "~/components/confirm-dialog";
+import { ShareFormDialog } from "~/components/share-form-dialog";
 import { StatusChip, type FormStatus } from "~/components/status-chip";
 import { VersionBadge } from "~/components/version-badge";
+import { buildFormPublicUrl } from "~/lib/share-urls";
 import { useUser } from "~/hooks/auth";
 import {
   useArchiveForm,
@@ -64,6 +66,7 @@ type FormRow = {
   description: string | null;
   slug: string;
   status: FormStatus;
+  visibility: "PUBLIC" | "UNLISTED";
   publishedVersionId: string | null;
   publishedVersionNumber: number | null;
   currentVersionNumber: number;
@@ -127,6 +130,7 @@ export function FormsTable() {
   const [order, setOrder] = React.useState<"asc" | "desc">("desc");
 
   const [deleteTarget, setDeleteTarget] = React.useState<FormRow | null>(null);
+  const [shareTarget, setShareTarget] = React.useState<FormRow | null>(null);
 
   React.useEffect(() => {
     const t = setTimeout(() => {
@@ -161,6 +165,7 @@ export function FormsTable() {
         description: row.description,
         slug: row.slug,
         status: row.status,
+        visibility: row.visibility,
         publishedVersionId: row.publishedVersionId,
         publishedVersionNumber: row.publishedVersionNumber,
         currentVersionNumber: row.currentVersionNumber,
@@ -183,18 +188,6 @@ export function FormsTable() {
       setOrder("desc");
     }
     setPageIndex(0);
-  }
-
-  async function copyPublicLink(row: FormRow) {
-    if (!user) return;
-    const origin = window.location.origin;
-    const url = `${origin}/u/${user.userGlobalFormSlug}/${row.slug}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copied");
-    } catch {
-      toast.error("Failed to copy link");
-    }
   }
 
   async function handleAction(
@@ -378,10 +371,10 @@ export function FormsTable() {
                         ) : null}
                         {row.status === "published" ? (
                           <DropdownMenuItem
-                            onClick={() => copyPublicLink(row)}
+                            onClick={() => setShareTarget(row)}
                           >
-                            <IconCopy className="size-4" />
-                            Copy public link
+                            <IconShare className="size-4" />
+                            Share
                           </DropdownMenuItem>
                         ) : null}
                         <DropdownMenuItem
@@ -563,6 +556,20 @@ export function FormsTable() {
           </div>
         </div>
       </div>
+
+      {shareTarget && user ? (
+        <ShareFormDialog
+          open={Boolean(shareTarget)}
+          onOpenChange={(o) => !o && setShareTarget(null)}
+          title={shareTarget.title}
+          publicUrl={buildFormPublicUrl({
+            origin: window.location.origin,
+            userSlug: user.userGlobalFormSlug,
+            formSlug: shareTarget.slug,
+          })}
+          visibility={shareTarget.visibility}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

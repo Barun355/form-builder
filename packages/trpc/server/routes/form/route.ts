@@ -15,6 +15,8 @@ import {
   getFormByIdOutputModel,
   listFormsInputModel,
   listFormsOutputModel,
+  listPublicInputModel,
+  listPublicOutputModel,
   publishFormInputModel,
   publishFormOutputModel,
   restoreFormInputModel,
@@ -139,10 +141,11 @@ export const formRouter = router({
       if (
         input.title === undefined &&
         input.description === undefined &&
-        input.slug === undefined
+        input.slug === undefined &&
+        input.visibility === undefined
       ) {
         throw badRequest(
-          "At least one of title, description, or slug must be provided",
+          "At least one of title, description, slug, or visibility must be provided",
         );
       }
 
@@ -322,6 +325,23 @@ export const formRouter = router({
       } catch (err) {
         mapServiceError(err);
       }
+    }),
+
+  listPublic: publicProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/listPublic"),
+        tags: TAGS,
+        summary: "List PUBLIC published forms for the explore page",
+        description:
+          "Paginated feed of forms with `visibility = PUBLIC` and `status = published`. Ordered by completed-submission count desc, then by last-updated desc. UNLISTED forms never appear here.",
+      },
+    })
+    .input(listPublicInputModel)
+    .output(listPublicOutputModel)
+    .query(async ({ input }) => {
+      return await formService.listPublicForms(input);
     }),
 
   getByPublicSlug: publicProcedure

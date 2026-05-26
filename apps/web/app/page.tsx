@@ -7,6 +7,7 @@ import { SocialProofBar } from "~/components/landing/sections/social-proof-bar";
 import { FeatureBento } from "~/components/landing/sections/feature-bento";
 import { HowItWorks } from "~/components/landing/sections/how-it-works";
 import { Templates } from "~/components/landing/sections/templates";
+import { FeaturedForms } from "~/components/landing/sections/featured-forms";
 import { Testimonials } from "~/components/landing/sections/testimonials";
 import { Pricing } from "~/components/landing/sections/pricing";
 import { Faq } from "~/components/landing/sections/faq";
@@ -34,6 +35,7 @@ export default function LandingPage() {
         <FeatureBento />
         <HowItWorks />
         <Templates />
+        <FeaturedForms />
         <Testimonials />
         <Pricing />
         <Faq />

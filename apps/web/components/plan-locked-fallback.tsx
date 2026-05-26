@@ -25,7 +25,7 @@ const COPY: Record<Feature, { title: string; description: string }> = {
 export function PlanLockedFallback({ feature }: { feature: Feature }) {
   const { title, description } = COPY[feature];
   return (
-    <div className="mx-auto max-w-3xl p-6 sm:p-10">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="px-6 sm:px-10 pt-8 pb-6 border-b border-border">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 text-primary px-3 py-1 text-body-sm font-medium">
@@ -40,7 +40,7 @@ export function PlanLockedFallback({ feature }: { feature: Feature }) {
         <iframe
           src={FEEDBACK_FORM_URL}
           loading="lazy"
-          className="w-full h-[640px] border-0"
+          className="w-full h-[720px] border-0"
           title="Simple Form early-access feedback"
         />
       </div>

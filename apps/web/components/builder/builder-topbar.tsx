@@ -9,9 +9,13 @@ import {
   IconChevronDown,
   IconEye,
   IconSettings,
+  IconShare,
 } from "@tabler/icons-react";
 
 import { Button } from "~/components/ui/button";
+import { useUser } from "~/hooks/auth";
+import { ShareFormDialog } from "~/components/share-form-dialog";
+import { buildFormPublicUrl } from "~/lib/share-urls";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,7 +66,9 @@ export function BuilderTopbar({ state, onPreview }: Props) {
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [shareOpen, setShareOpen] = React.useState(false);
   const [localTitle, setLocalTitle] = React.useState(title);
+  const { user } = useUser();
 
   React.useEffect(() => {
     setLocalTitle(title);
@@ -185,6 +191,17 @@ export function BuilderTopbar({ state, onPreview }: Props) {
           Preview
         </Button>
 
+        {status === "published" && user ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShareOpen(true)}
+          >
+            <IconShare className="size-4" />
+            Share
+          </Button>
+        ) : null}
+
         <Button
           size="sm"
           variant={isDirty ? "default" : "outline"}
@@ -286,6 +303,21 @@ export function BuilderTopbar({ state, onPreview }: Props) {
         onOpenChange={setSettingsOpen}
         state={state}
       />
+
+      {user && status === "published" ? (
+        <ShareFormDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          title={state.title}
+          publicUrl={buildFormPublicUrl({
+            origin:
+              typeof window !== "undefined" ? window.location.origin : "",
+            userSlug: user.userGlobalFormSlug,
+            formSlug: state.formSlug,
+          })}
+          visibility={state.visibility}
+        />
+      ) : null}
     </header>
   );
 }

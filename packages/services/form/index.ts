@@ -30,6 +30,7 @@ import {
   getByPublicSlugInput,
   getFormByIdInput,
   listFormsInput,
+  listPublicInput,
   publishFormInput,
   restoreFormInput,
   softDeleteFormInput,
@@ -46,6 +47,8 @@ import {
   type GetFormByIdOutputType,
   type ListFormsInputType,
   type ListFormsOutputType,
+  type ListPublicInputType,
+  type ListPublicOutputType,
   type PublicFormDetailType,
   type PublishFormInputType,
   type PublishFormOutputType,
@@ -199,6 +202,7 @@ class FormService {
         description: formTable.description,
         slug: formTable.slug,
         status: formTable.status,
+        visibility: formTable.visibility,
         publishedVersionId: formTable.publishedVersionId,
         createdAt: formTable.createdAt,
         updatedAt: formTable.updatedAt,
@@ -236,6 +240,7 @@ class FormService {
         description: row.description,
         slug: row.slug,
         status: row.status,
+        visibility: row.visibility,
         publishedVersionId: row.publishedVersionId ?? null,
         publishedVersionNumber: row.publishedVersionNumber ?? null,
         currentVersionNumber: Number(row.currentVersionNumber ?? 1),
@@ -289,6 +294,7 @@ class FormService {
       description: form.description ?? null,
       slug: form.slug,
       status: form.status,
+      visibility: form.visibility,
       publishedVersionId: form.publishedVersionId ?? null,
       createdAt: form.createdAt,
       updatedAt: form.updatedAt,
@@ -306,7 +312,7 @@ class FormService {
   public async update(
     payload: UpdateFormInputType,
   ): Promise<UpdateFormOutputType> {
-    const { id, requestedBy, title, description, slug } =
+    const { id, requestedBy, title, description, slug, visibility } =
       await updateFormInput.parseAsync(payload);
 
     await this.assertOwnership({ id, requestedBy });
@@ -331,10 +337,12 @@ class FormService {
       title?: string;
       description?: string | null;
       slug?: string;
+      visibility?: "PUBLIC" | "UNLISTED";
     } = {};
     if (title !== undefined) patch.title = title;
     if (description !== undefined) patch.description = description;
     if (slug !== undefined) patch.slug = slug;
+    if (visibility !== undefined) patch.visibility = visibility;
 
     const [updated] = await db
       .update(formTable)
@@ -350,6 +358,7 @@ class FormService {
       description: updated.description ?? null,
       slug: updated.slug,
       status: updated.status,
+      visibility: updated.visibility,
       publishedVersionId: updated.publishedVersionId ?? null,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
@@ -667,6 +676,79 @@ class FormService {
         version: version.version,
         schema: version.schema,
       },
+    };
+  }
+
+  /**
+   * Public explore feed: PUBLIC + published forms only. Ranks by completed
+   * submission count desc so the busiest forms surface first.
+   */
+  public async listPublicForms(
+    payload: ListPublicInputType,
+  ): Promise<ListPublicOutputType> {
+    const { limit, offset } = await listPublicInput.parseAsync(payload);
+
+    const submissionCountSq = db
+      .select({
+        formId: formSubmissionsTable.formId,
+        cnt: count().as("cnt"),
+      })
+      .from(formSubmissionsTable)
+      .where(
+        and(
+          eq(formSubmissionsTable.status, "completed"),
+          eq(formSubmissionsTable.isDeleted, false),
+        ),
+      )
+      .groupBy(formSubmissionsTable.formId)
+      .as("submission_counts");
+
+    const whereExpression = and(
+      eq(formTable.isDeleted, false),
+      eq(formTable.status, "published"),
+      eq(formTable.visibility, "PUBLIC"),
+    );
+
+    const items = await db
+      .select({
+        id: formTable.id,
+        title: formTable.title,
+        description: formTable.description,
+        formSlug: formTable.slug,
+        userSlug: usersTable.userGlobalFormSlug,
+        submissionCount: sql<number>`COALESCE(${submissionCountSq.cnt}, 0)::int`,
+        publishedAt: formTable.updatedAt,
+      })
+      .from(formTable)
+      .innerJoin(usersTable, eq(usersTable.id, formTable.createdBy))
+      .leftJoin(
+        submissionCountSq,
+        eq(submissionCountSq.formId, formTable.id),
+      )
+      .where(whereExpression)
+      .orderBy(
+        desc(sql`COALESCE(${submissionCountSq.cnt}, 0)`),
+        desc(formTable.updatedAt),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    const [totalRow] = await db
+      .select({ totalCount: count() })
+      .from(formTable)
+      .where(whereExpression);
+
+    return {
+      items: items.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description ?? null,
+        formSlug: row.formSlug,
+        userSlug: row.userSlug,
+        submissionCount: Number(row.submissionCount ?? 0),
+        publishedAt: row.publishedAt,
+      })),
+      totalCount: Number(totalRow?.totalCount ?? 0),
     };
   }
 

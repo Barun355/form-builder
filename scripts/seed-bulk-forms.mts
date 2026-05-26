@@ -80,6 +80,13 @@ async function publishForm(id: string) {
   };
 }
 
+async function setFormVisibility(id: string, visibility: "PUBLIC" | "UNLISTED") {
+  return (await api("/form/updateForm", {
+    method: "POST",
+    body: JSON.stringify({ id, visibility }),
+  })) as { id: string; visibility: "PUBLIC" | "UNLISTED" };
+}
+
 async function startSubmission(versionId: string, meta: ClientMeta) {
   return (await api("/form-submissions/start", {
     method: "POST",
@@ -431,6 +438,9 @@ interface FormSpec {
   title: string;
   description: string;
   schema: FormSchema;
+  // When `true`, after the form is published the seeder marks it as PUBLIC
+  // so it shows up on the /explore page. Defaults to UNLISTED (omitted).
+  isPublic?: boolean;
 }
 
 function f(
@@ -483,6 +493,7 @@ const FORMS: FormSpec[] = [
 
   // 2 — Event registration
   {
+    isPublic: true,
     title: "DevConf 2026 — Attendee Registration",
     description: "Reserve your seat for the developer conference.",
     schema: {
@@ -543,6 +554,7 @@ const FORMS: FormSpec[] = [
 
   // 4 — Bug report
   {
+    isPublic: true,
     title: "Bug Report — Internal",
     description: "Help engineering reproduce and fix issues quickly.",
     schema: {
@@ -618,6 +630,7 @@ const FORMS: FormSpec[] = [
 
   // 7 — Restaurant reservation
   {
+    isPublic: true,
     title: "Reservation — Maison Vert",
     description: "Book a table.",
     schema: {
@@ -697,6 +710,7 @@ const FORMS: FormSpec[] = [
 
   // 10 — Contact us
   {
+    isPublic: true,
     title: "Contact Us",
     description: "We'll get back to you within one business day.",
     schema: {
@@ -778,6 +792,9 @@ async function main() {
     const form = await createForm(spec.title, spec.description);
     await saveDraft(form.id, spec.schema);
     const published = await publishForm(form.id);
+    if (spec.isPublic) {
+      await setFormVisibility(form.id, "PUBLIC");
+    }
 
     const targetCount = randInt(MIN_RESPONSES, MAX_RESPONSES);
     const tasks = Array.from({ length: targetCount }, (_, i) => i);

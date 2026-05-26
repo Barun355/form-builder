@@ -1,5 +1,9 @@
 "use client";
 
+import * as React from "react";
+import { toast } from "sonner";
+import { IconAlertTriangle } from "@tabler/icons-react";
+
 import {
   Sheet,
   SheetContent,
@@ -11,7 +15,8 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
-import type { BuilderState } from "./store";
+import { useUpdateForm } from "~/hooks/form";
+import type { BuilderState, FormVisibility } from "./store";
 
 type Props = {
   open: boolean;
@@ -21,10 +26,30 @@ type Props = {
 
 export function FormSettingsSheet({ open, onOpenChange, state }: Props) {
   const ty = state.schema.thankYou ?? {};
+  const { updateFormAsync, isPending } = useUpdateForm();
+
+  async function handleVisibilityChange(makePublic: boolean) {
+    const next: FormVisibility = makePublic ? "PUBLIC" : "UNLISTED";
+    const prev = state.visibility;
+    if (next === prev) return;
+    state.setVisibility(next); // optimistic
+    try {
+      await updateFormAsync({ id: state.formId, visibility: next });
+      toast.success(
+        next === "PUBLIC" ? "Form is now public" : "Form is now unlisted",
+      );
+    } catch (err) {
+      state.setVisibility(prev);
+      const message = err instanceof Error ? err.message : "Failed";
+      toast.error(`Visibility update failed: ${message}`);
+    }
+  }
+
+  const isPublic = state.visibility === "PUBLIC";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Form settings</SheetTitle>
           <SheetDescription>
@@ -33,7 +58,42 @@ export function FormSettingsSheet({ open, onOpenChange, state }: Props) {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-6 px-4 pb-6">
+        <div className="space-y-8 px-4 pb-8">
+          <section>
+            <h3 className="text-h4 text-foreground mb-3">Visibility</h3>
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="visibility-public" className="cursor-pointer">
+                    List on the Explore page
+                  </Label>
+                  <p className="text-body-sm text-muted-foreground">
+                    {isPublic
+                      ? "Anyone can discover this form on /explore."
+                      : "Only people with the direct link can see this form."}
+                  </p>
+                </div>
+                <Switch
+                  id="visibility-public"
+                  checked={isPublic}
+                  disabled={isPending}
+                  onCheckedChange={handleVisibilityChange}
+                />
+              </div>
+              {isPublic ? (
+                <div className="flex gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm text-warning-foreground">
+                  <IconAlertTriangle className="size-4 mt-0.5 shrink-0 text-warning" />
+                  <p>
+                    This form is listed on the public{" "}
+                    <span className="font-medium">/explore</span> page. Anyone
+                    can view and submit it, and your submission count is
+                    publicly visible. Switch back to Unlisted at any time.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
           <section>
             <h3 className="text-h4 text-foreground mb-3">Thank you screen</h3>
             <div className="space-y-4">

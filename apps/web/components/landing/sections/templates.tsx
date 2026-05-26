@@ -34,7 +34,7 @@ export function Templates() {
             titleClassName="text-display-md"
           />
           <Link
-            href="/signup"
+            href="/templates"
             className="inline-flex items-center text-body-sm text-primary hover:underline"
           >
             Browse all templates
@@ -49,7 +49,7 @@ export function Templates() {
           variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
           className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {templates.map((t) => (
+          {templates.slice(0, 6).map((t) => (
             <m.div key={t.slug} variants={cardVariants}>
             <Link
               href={`/signup?template=${t.slug}`}

@@ -15,6 +15,8 @@ import { formVersionsTable } from "./form-versions";
 
 export const FormStats = pgEnum("form_status", ["draft", "published", "archived", "closed"])
 
+export const FormVisibility = pgEnum("form_visibility", ["PUBLIC", "UNLISTED"])
+
 export const formTable = pgTable("forms", {
     id: uuid("id").primaryKey().defaultRandom(),
 
@@ -25,6 +27,8 @@ export const formTable = pgTable("forms", {
     createdBy: uuid("created_by").references(() => usersTable.id).notNull(),
 
     status: FormStats().notNull().default("draft"),
+
+    visibility: FormVisibility().notNull().default("UNLISTED"),
 
     publishedVersionId: uuid("published_version_id").references((): AnyPgColumn => formVersionsTable.id),
 

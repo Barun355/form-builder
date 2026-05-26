@@ -12,9 +12,9 @@ import { cn } from "~/lib/utils";
 
 const sectionLinks = [
   { label: "Features", href: "/#features" },
-  { label: "Templates", href: "/#templates" },
+  { label: "Templates", href: "/templates" },
+  { label: "Explore", href: "/explore" },
   { label: "Pricing", href: "/#pricing" },
-  { label: "FAQ", href: "/#faq" },
 ];
 
 export function LandingNav() {

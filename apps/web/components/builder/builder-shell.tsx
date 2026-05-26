@@ -60,8 +60,10 @@ export function BuilderShell({ formId }: Props) {
     const latest = form.latestVersion;
     state.init({
       formId: form.id,
+      formSlug: form.slug,
       title: form.title,
       status: form.status as FormStatus,
+      visibility: form.visibility,
       publishedVersionId: form.publishedVersionId ?? null,
       schema: latest.schema as never,
       versions: versions.map((v) => ({

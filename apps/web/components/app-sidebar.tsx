@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   IconChartBar,
   IconClipboardText,
+  IconCompass,
   IconDashboard,
   IconLogout,
   IconInnerShadowTop,
@@ -46,6 +47,7 @@ const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: IconDashboard },
   { title: "Forms", href: "/dashboard/forms", icon: IconClipboardText },
   { title: "Analytics", href: "/dashboard/analytics", icon: IconChartBar },
+  { title: "Explore", href: "/explore", icon: IconCompass },
 ] as const;
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

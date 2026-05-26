@@ -26,10 +26,14 @@ export type BuilderVersionItem = {
   createdAt: Date;
 };
 
+export type FormVisibility = "PUBLIC" | "UNLISTED";
+
 export type BuilderState = {
   formId: string;
+  formSlug: string;
   title: string;
   status: FormStatus;
+  visibility: FormVisibility;
   publishedVersionId: string | null;
 
   // Schema being viewed/edited
@@ -57,8 +61,10 @@ export type BuilderState = {
   // ─── Actions ──────────────────────────────────────────────────────────────
   init(args: {
     formId: string;
+    formSlug: string;
     title: string;
     status: FormStatus;
+    visibility: FormVisibility;
     publishedVersionId: string | null;
     schema: FormSchemaI;
     versions: BuilderVersionItem[];
@@ -66,6 +72,7 @@ export type BuilderState = {
   }): void;
   setTitle(t: string): void;
   setStatus(s: FormStatus): void;
+  setVisibility(v: FormVisibility): void;
   setPublishedVersionId(id: string | null): void;
   setVersions(v: BuilderVersionItem[], latestVersionId: string): void;
 
@@ -193,8 +200,10 @@ export type BuilderStore = UseBoundStore<StoreApi<BuilderState>>;
 export function createBuilderStore(): BuilderStore {
   return create<BuilderState>((set, get) => ({
     formId: "",
+    formSlug: "",
     title: "",
     status: "draft",
+    visibility: "UNLISTED",
     publishedVersionId: null,
 
     schema: EMPTY_SCHEMA,
@@ -214,12 +223,14 @@ export function createBuilderStore(): BuilderStore {
     lastSavedAt: null,
     saveError: null,
 
-    init({ formId, title, status, publishedVersionId, schema, versions, latestVersionId }) {
+    init({ formId, formSlug, title, status, visibility, publishedVersionId, schema, versions, latestVersionId }) {
       const hydrated = hydrate(schema);
       set({
         formId,
+        formSlug,
         title,
         status,
+        visibility,
         publishedVersionId,
         schema: hydrated,
         initialSchema: clone(hydrated),
@@ -243,6 +254,10 @@ export function createBuilderStore(): BuilderStore {
 
     setStatus(s) {
       set({ status: s });
+    },
+
+    setVisibility(v) {
+      set({ visibility: v });
     },
 
     setPublishedVersionId(id) {

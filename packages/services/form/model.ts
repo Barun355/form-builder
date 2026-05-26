@@ -9,6 +9,9 @@ export const formStatusEnum = z.enum([
 
 export type FormStatus = z.infer<typeof formStatusEnum>;
 
+export const formVisibilityEnum = z.enum(["PUBLIC", "UNLISTED"]);
+export type FormVisibility = z.infer<typeof formVisibilityEnum>;
+
 const slugShape = z
   .string()
   .min(1)
@@ -51,6 +54,7 @@ const listFormItem = z.object({
   description: z.string().nullable(),
   slug: z.string(),
   status: formStatusEnum,
+  visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
   publishedVersionNumber: z.number().int().positive().nullable(),
   currentVersionNumber: z.number().int().positive(),
@@ -87,6 +91,7 @@ export const getFormByIdOutput = z.object({
   description: z.string().nullable(),
   slug: z.string(),
   status: formStatusEnum,
+  visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
@@ -103,13 +108,18 @@ export const updateFormInput = z
     title: z.string().trim().min(1).max(55).optional(),
     description: z.string().trim().max(255).nullable().optional(),
     slug: slugShape.optional(),
+    visibility: formVisibilityEnum.optional(),
   })
   .refine(
     (d) =>
       d.title !== undefined ||
       d.description !== undefined ||
-      d.slug !== undefined,
-    { message: "At least one of title, description, or slug must be provided" },
+      d.slug !== undefined ||
+      d.visibility !== undefined,
+    {
+      message:
+        "At least one of title, description, slug, or visibility must be provided",
+    },
   );
 export type UpdateFormInputType = z.infer<typeof updateFormInput>;
 
@@ -119,6 +129,7 @@ export const updateFormOutput = z.object({
   description: z.string().nullable(),
   slug: z.string(),
   status: formStatusEnum,
+  visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
@@ -214,3 +225,29 @@ export const publicFormDetail = z.object({
   publishedVersion: publicVersionEmbedded,
 });
 export type PublicFormDetailType = z.infer<typeof publicFormDetail>;
+
+// ─── listPublic ───────────────────────────────────────────────────────────
+// Public explore feed: PUBLIC + published forms only, ordered by submission
+// count. Pagination via limit/offset.
+export const listPublicInput = z.object({
+  limit: z.number().int().min(1).max(60).default(24),
+  offset: z.number().int().min(0).default(0),
+});
+export type ListPublicInputType = z.input<typeof listPublicInput>;
+
+const publicListItem = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string().nullable(),
+  formSlug: z.string(),
+  userSlug: z.string(),
+  submissionCount: z.number().int().nonnegative(),
+  publishedAt: z.date().nullable(),
+});
+export type PublicListItemType = z.infer<typeof publicListItem>;
+
+export const listPublicOutput = z.object({
+  items: z.array(publicListItem),
+  totalCount: z.number().int().nonnegative(),
+});
+export type ListPublicOutputType = z.infer<typeof listPublicOutput>;

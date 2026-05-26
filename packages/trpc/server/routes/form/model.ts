@@ -4,6 +4,12 @@ const formStatusEnum = z
   .enum(["draft", "published", "archived", "closed"])
   .describe("Form lifecycle status");
 
+const formVisibilityEnum = z
+  .enum(["PUBLIC", "UNLISTED"])
+  .describe(
+    "Discoverability. PUBLIC forms appear on the /explore page; UNLISTED are reachable only by direct link.",
+  );
+
 const slugShape = z
   .string()
   .min(1)
@@ -77,6 +83,7 @@ const listFormItemModel = z.object({
   description: z.string().nullable(),
   slug: z.string(),
   status: formStatusEnum,
+  visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
   publishedVersionNumber: z
     .number()
@@ -118,6 +125,7 @@ export const getFormByIdOutputModel = z.object({
   description: z.string().nullable(),
   slug: z.string(),
   status: formStatusEnum,
+  visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
@@ -134,6 +142,7 @@ export const updateFormInputModel = z.object({
   title: z.string().trim().min(1).max(55).optional(),
   description: z.string().trim().max(255).nullable().optional(),
   slug: slugShape.optional(),
+  visibility: formVisibilityEnum.optional(),
 });
 
 export const updateFormOutputModel = z.object({
@@ -142,6 +151,7 @@ export const updateFormOutputModel = z.object({
   description: z.string().nullable(),
   slug: z.string(),
   status: formStatusEnum,
+  visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
@@ -211,3 +221,35 @@ export const getByPublicSlugOutputModel = z
     publishedVersion: publicVersionModel,
   })
   .nullable();
+
+// ─── listPublic ───────────────────────────────────────────────────────────
+export const listPublicInputModel = z.object({
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(60)
+    .optional()
+    .describe("Items per page (default 24, max 60)"),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe("Items to skip (default 0)"),
+});
+
+const publicListItemModel = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string().nullable(),
+  formSlug: z.string(),
+  userSlug: z.string(),
+  submissionCount: z.number().int().nonnegative(),
+  publishedAt: z.date().nullable(),
+});
+
+export const listPublicOutputModel = z.object({
+  items: z.array(publicListItemModel),
+  totalCount: z.number().int().nonnegative(),
+});
