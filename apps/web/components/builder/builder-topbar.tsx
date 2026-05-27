@@ -125,9 +125,23 @@ export function BuilderTopbar({ state, onPreview }: Props) {
       const result = await publish.mutateAsync({ id: formId });
       setStatus(result.status);
       setPublishedVersionId(result.publishedVersionId);
-      toast.success("Form published", {
-        description: "Your form is now live.",
-      });
+
+      // First-publish welcome email — server only sets `notification`
+      // when this was the user's first published form ever.
+      if (result.notification?.sent) {
+        toast.success("🎉 First form shipped — we just emailed you a note.", {
+          description: "Your form is now live.",
+        });
+      } else if (result.notification && !result.notification.sent) {
+        toast.success("Form published", {
+          description:
+            "Your form is now live. (We couldn't send the confirmation email — check your inbox spam.)",
+        });
+      } else {
+        toast.success("Form published", {
+          description: "Your form is now live.",
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to publish";
       toast.error(`Publish failed: ${message}`);

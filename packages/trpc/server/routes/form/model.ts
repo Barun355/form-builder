@@ -38,6 +38,19 @@ export const createFormInputModel = z.object({
     .describe("Optional form description"),
 });
 
+// Notification surfaced when a publishForm call was the user's first
+// publish ever (count of forms with publishedVersionId transitions 0→1).
+// Absent on subsequent publishes.
+const formNotificationModel = z
+  .object({
+    template: z.literal("first-form"),
+    sent: z.boolean(),
+    error: z.string().optional(),
+  })
+  .describe(
+    "Status of the first-publish welcome email. Only present when this was the caller's first published form.",
+  );
+
 export const createFormOutputModel = z.object({
   id: z.uuid().describe("UUID of the newly created form"),
   title: z.string(),
@@ -187,6 +200,7 @@ export const publishFormOutputModel = z.object({
     id: z.uuid(),
     version: z.number().int().min(1),
   }),
+  notification: formNotificationModel.optional(),
 });
 
 export const unpublishFormInputModel = stateTransitionInputModel;

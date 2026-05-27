@@ -1,3 +1,7 @@
+import { and, count, db, eq, isNotNull } from "@repo/database";
+import { formTable } from "@repo/database/models/form";
+import { usersTable } from "@repo/database/models/user";
+import { sendFirstFormEmailWithStatus } from "@repo/mailer";
 import { formService } from "../../services";
 import { protectedProcedure, publicProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
@@ -221,14 +225,49 @@ export const formRouter = router({
     .input(publishFormInputModel)
     .output(publishFormOutputModel)
     .mutation(async ({ input, ctx }) => {
+      let result: Awaited<ReturnType<typeof formService.publish>>;
       try {
-        return await formService.publish({
+        result = await formService.publish({
           id: input.id,
           requestedBy: ctx.user.id,
         });
       } catch (err) {
         mapServiceError(err);
       }
+
+      // First-publish email — fires once per user. We count distinct
+      // non-deleted forms with a publishedVersionId AFTER the publish
+      // commits; if that's exactly 1, this was the user's first publish
+      // ever. unpublishForm preserves publishedVersionId, so this counter
+      // is monotonic — re-publishing after an unpublish won't double-fire.
+      const [{ totalPublished } = { totalPublished: 0 }] = await db
+        .select({ totalPublished: count() })
+        .from(formTable)
+        .where(
+          and(
+            eq(formTable.createdBy, ctx.user.id),
+            eq(formTable.isDeleted, false),
+            isNotNull(formTable.publishedVersionId),
+          ),
+        );
+      if (Number(totalPublished ?? 0) !== 1) return result;
+
+      const [user] = await db
+        .select({
+          id: usersTable.id,
+          email: usersTable.email,
+          fullName: usersTable.fullName,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.id, ctx.user.id))
+        .limit(1);
+      if (!user) return result;
+
+      const status = await sendFirstFormEmailWithStatus(user);
+      return {
+        ...result,
+        notification: { template: "first-form" as const, ...status },
+      };
     }),
 
   unpublishForm: protectedProcedure

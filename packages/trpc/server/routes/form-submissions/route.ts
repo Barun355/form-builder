@@ -1,3 +1,8 @@
+import { and, count, db, eq } from "@repo/database";
+import { formTable } from "@repo/database/models/form";
+import { formSubmissionsTable } from "@repo/database/models/form-submissions";
+import { usersTable } from "@repo/database/models/user";
+import { sendSubmissionsMilestoneEmail } from "@repo/mailer";
 import { formSubmissionsService } from "../../services";
 import {
   protectedProcedure,
@@ -97,11 +102,73 @@ export const formSubmissionsRouter = router({
       const rl = submissionCompleteLimiter.consume(ip);
       if (!rl.allowed) throw tooManyRequests(rl.retryAfterMs);
 
+      let result: Awaited<ReturnType<typeof formSubmissionsService.complete>>;
       try {
-        return await formSubmissionsService.complete(input, ctx.req);
+        result = await formSubmissionsService.complete(input, ctx.req);
       } catch (err) {
         mapServiceError(err);
       }
+
+      // Post-success first-submission email — fire-and-forget. The
+      // submitter is not the recipient (form owner is), so there's no
+      // in-app surface; we only act when the owner's lifetime completed
+      // count is exactly 1. All DB work + send is wrapped in a
+      // catch-all so a mail/DB hiccup never affects the submitter's
+      // response.
+      void (async () => {
+        try {
+          // Look up the form + owner via the submission we just wrote.
+          const [row] = await db
+            .select({
+              ownerId: formTable.createdBy,
+              formTitle: formTable.title,
+            })
+            .from(formSubmissionsTable)
+            .innerJoin(
+              formTable,
+              eq(formTable.id, formSubmissionsTable.formId),
+            )
+            .where(eq(formSubmissionsTable.id, result.id))
+            .limit(1);
+          if (!row) return;
+
+          // Count all-time completed submissions across this owner's forms.
+          const [{ total } = { total: 0 }] = await db
+            .select({ total: count() })
+            .from(formSubmissionsTable)
+            .innerJoin(
+              formTable,
+              eq(formTable.id, formSubmissionsTable.formId),
+            )
+            .where(
+              and(
+                eq(formTable.createdBy, row.ownerId),
+                eq(formSubmissionsTable.status, "completed"),
+                eq(formSubmissionsTable.isDeleted, false),
+              ),
+            );
+          if (Number(total ?? 0) !== 1) return;
+
+          const [owner] = await db
+            .select({
+              id: usersTable.id,
+              email: usersTable.email,
+              fullName: usersTable.fullName,
+            })
+            .from(usersTable)
+            .where(eq(usersTable.id, row.ownerId))
+            .limit(1);
+          if (!owner) return;
+
+          await sendSubmissionsMilestoneEmail(owner, 1, row.formTitle);
+        } catch {
+          // sendSubmissionsMilestoneEmail already logs; any DB/lookup
+          // failure here is non-fatal — the submission itself already
+          // succeeded.
+        }
+      })();
+
+      return result;
     }),
 
   list: protectedProcedure

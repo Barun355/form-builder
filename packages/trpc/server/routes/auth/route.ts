@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sendWelcomeEmailWithStatus } from "@repo/mailer";
 import { userService } from "../../services";
 import { protectedProcedure, publicProcedure, router } from "../../trpc";
 import {
@@ -54,7 +55,19 @@ export const authRouter = router({
         });
 
         setAuthentication(ctx, token);
-        return { id };
+
+        // Synchronous welcome email. WithStatus variant never throws —
+        // mail failure logs internally and returns { sent: false, error }.
+        const status = await sendWelcomeEmailWithStatus({
+          id,
+          email,
+          fullName,
+        });
+
+        return {
+          id,
+          notification: { template: "welcome" as const, ...status },
+        };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (message.toLowerCase().includes("already exists")) {

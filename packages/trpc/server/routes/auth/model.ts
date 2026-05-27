@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+// Shared notification model surfaced on mutations that opportunistically
+// send a transactional email (welcome, first-form). Optional — absent
+// means no email was attempted; sent=false carries the error string.
+const notificationModel = z
+  .object({
+    template: z.enum(["welcome", "first-form"]),
+    sent: z.boolean(),
+    error: z.string().optional(),
+  })
+  .describe("Status of the side-effect email dispatched by this procedure.");
+
 export const createUserWithEmailAndPasswordInputModel = z.object({
   fullName: z.string().min(1).max(80).describe("Full name of the user"),
   email: z.email().describe("Email address of the user"),
@@ -12,6 +23,7 @@ export const createUserWithEmailAndPasswordInputModel = z.object({
 
 export const createUserWithEmailAndPasswordOutputModel = z.object({
   id: z.string().describe("Unique identifier for the user"),
+  notification: notificationModel.optional(),
 });
 
 export const loginUserWithEmailAndPasswordInputModel = z.object({

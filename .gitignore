@@ -1,6 +1,6 @@
 node_modules
 
-.claude
+.claude/
 
 .env
 .env.local

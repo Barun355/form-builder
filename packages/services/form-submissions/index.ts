@@ -226,6 +226,7 @@ class FormSubmissionsService {
 
       const id = inserted[0]?.id;
       if (!id) throw new Error("Internal: failed to insert submission");
+
       return { id, submittedAt: now };
     });
   }

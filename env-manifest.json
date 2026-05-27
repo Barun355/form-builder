@@ -50,6 +50,51 @@
       "default": "http://localhost:3000",
       "comment": "Public web origin. In prod, set to frontend URL.",
       "targets": ["apps/web/.env.local"]
+    },
+    "MAIL_PROVIDER": {
+      "default": "nodemailer",
+      "comment": "nodemailer | resend. Selects the @repo/mailer transport.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "MAIL_FROM": {
+      "default": "Simple Form <no-reply@simpleform.local>",
+      "comment": "Default From: address used by transactional emails.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "APP_ORIGIN": {
+      "default": "http://localhost:3000",
+      "comment": "Frontend origin used to build links inside email templates. Mirrors NEXT_PUBLIC_APP_ORIGIN.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "SMTP_HOST": {
+      "default": "localhost",
+      "comment": "SMTP server hostname. Required when MAIL_PROVIDER=nodemailer.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "SMTP_PORT": {
+      "default": "587",
+      "comment": "SMTP server port. 465 with SMTP_SECURE=true for implicit TLS.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "SMTP_USER": {
+      "default": "user",
+      "comment": "SMTP auth user. Required when MAIL_PROVIDER=nodemailer.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "SMTP_PASS": {
+      "default": "password",
+      "comment": "SMTP auth password. Required when MAIL_PROVIDER=nodemailer.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "SMTP_SECURE": {
+      "default": "false",
+      "comment": "true → implicit TLS (port 465). false → STARTTLS (port 587).",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
+    },
+    "RESEND_API_KEY": {
+      "default": "",
+      "comment": "Resend API key. Required when MAIL_PROVIDER=resend. Get one at https://resend.com/api-keys.",
+      "targets": ["apps/api/.env", "packages/mailer/.env"]
     }
   }
 }

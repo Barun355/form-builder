@@ -9,15 +9,13 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-    const router = useRouter()
-    const { user } = useUser();
+  const router = useRouter()
+  const { user } = useUser();
 
-    useEffect(() => {
-        if (!user?.id) {
-            router.push("/signin")
-        } else {
-            router.push("/dashboard")
-        }
-    }, [user])
+  useEffect(() => {
+    if (user?.id) {
+      router.push("/dashboard")
+    }
+  }, [user])
   return <>{children}</>;
 }

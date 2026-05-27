@@ -114,6 +114,23 @@ resolve_value() {
   local generate
   generate=$(jq -r --arg k "$key" '.vars[$k].generate // empty' "$MANIFEST")
   if [ -n "$generate" ]; then
+    # Preserve an already-issued JWT_SECRET. Rotating it under --force
+    # would log everyone out and invalidate every issued token. To rotate
+    # intentionally, delete the JWT_SECRET=… line from apps/api/.env and
+    # rerun this script. Other generated keys (if any are added later)
+    # are NOT preserved by this branch — opt them in here case-by-case.
+    if [ "$key" = "JWT_SECRET" ]; then
+      local target existing
+      for target in $(jq -r --arg k "$key" '.vars[$k].targets[]' "$MANIFEST"); do
+        if [ -f "$target" ]; then
+          existing=$(grep -E "^${key}=" "$target" | head -1 | cut -d= -f2-)
+          if [ -n "$existing" ]; then
+            printf '%s' "$existing"
+            return
+          fi
+        fi
+      done
+    fi
     case "$generate" in
       random-base64-48) openssl rand -base64 48 | tr -d '\n' ;;
       random-base64-32) openssl rand -base64 32 | tr -d '\n' ;;
@@ -165,6 +182,17 @@ declare -A RESOLVED
 for key in $(jq -r '.vars | keys[]' "$MANIFEST"); do
   RESOLVED["$key"]=$(resolve_value "$key")
 done
+
+# JWT_SECRET preservation: if the value we resolved already matches what
+# lives in apps/api/.env, resolve_value found and reused it. Surface that
+# in the output so the operator can see what happened — rotating a secret
+# silently would be a footgun.
+if [ -f "apps/api/.env" ]; then
+  current_jwt=$(grep -E "^JWT_SECRET=" apps/api/.env | head -1 | cut -d= -f2-)
+  if [ -n "$current_jwt" ] && [ "$current_jwt" = "${RESOLVED[JWT_SECRET]}" ]; then
+    echo "✓ JWT_SECRET — reused existing value (delete the line + rerun to rotate)"
+  fi
+fi
 
 # ─── Write each target file ──────────────────────────────────────────────
 

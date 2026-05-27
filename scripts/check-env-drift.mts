@@ -29,6 +29,7 @@ const ZOD_SOURCES = [
   { path: "packages/database/env.ts", label: "database" },
   { path: "packages/services/env.ts", label: "services" },
   { path: "packages/logger/env.ts", label: "logger" },
+  { path: "packages/mailer/env.ts", label: "mailer" },
   { path: "apps/api/src/env.ts", label: "api" },
 ];
 

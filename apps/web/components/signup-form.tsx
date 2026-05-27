@@ -48,12 +48,24 @@ export function SignupForm({
     }
 
     try {
-      await createUserWithEmailAndPasswordAsync({
+      const result = await createUserWithEmailAndPasswordAsync({
         fullName: values.name,
         email: values.email,
         password: values.password,
       });
-      toast.success("Account created — welcome to Simple Form");
+
+      // The server attempts a welcome email synchronously. Surface its
+      // outcome so the user knows whether to check their inbox.
+      if (result.notification?.sent) {
+        toast.success(`Welcome — we sent a confirmation to ${values.email}`);
+      } else if (result.notification && !result.notification.sent) {
+        toast.warning(
+          "Account created, but we couldn't send the welcome email. Check your spam folder or contact support.",
+        );
+      } else {
+        toast.success("Account created — welcome to Simple Form");
+      }
+
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
