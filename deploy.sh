@@ -176,8 +176,23 @@ pnpm run db:generate
 say "Applying migrations"
 pnpm run db:migrate
 
+# Free RAM for the build. Postgres isn't needed during `pnpm build` (next
+# build + tsup are offline), and on a light VPS the container competing for
+# memory can OOM-kill the build. Stop it now, restart before PM2 (apps need
+# the DB at runtime).
+say "Stopping Postgres to free memory for the build"
+docker compose stop
+
 say "Building all apps (turbo)"
 pnpm build
+
+say "Restarting Postgres"
+docker compose start
+for i in $(seq 1 30); do
+  docker exec postgresdb-typeform pg_isready -U postgres >/dev/null 2>&1 && { echo "  ✓ Postgres ready"; break; }
+  [ "$i" -eq 30 ] && die "Postgres did not come back up after build"
+  sleep 1
+done
 
 # ─── 8. Start apps with PM2 ────────────────────────────────────────────────
 
@@ -192,6 +207,44 @@ pm2 startup systemd -u "$(whoami)" --hp "$HOME" | tail -1 | grep -E '^sudo|^env'
 say "Enabling and (re)starting Caddy"
 $SUDO systemctl enable caddy
 $SUDO systemctl reload caddy 2>/dev/null || $SUDO systemctl restart caddy
+
+# ─── 10. Seed feedback form + rebuild web ──────────────────────────────────
+# create-feedback-form.mts logs into the running API, creates+publishes the
+# feedback form, and writes its public URL into apps/web/lib/feedback-form-url.ts.
+# That constant is baked into the web bundle at build time, so we rebuild +
+# reload web afterwards for the new URL to take effect.
+#
+# Hit the API on 127.0.0.1 directly (not the public URL) so this doesn't
+# depend on Caddy/TLS being live yet. APP_BASE is derived from CORS_ORIGIN in
+# apps/api/.env, so the URL written into the constant is the public frontend.
+
+say "Waiting for API to accept connections"
+for i in $(seq 1 30); do
+  curl -s -o /dev/null "http://127.0.0.1:${BACKEND_PORT}" && { echo "  ✓ API up"; break; }
+  [ "$i" -eq 30 ] && die "API did not come up on port ${BACKEND_PORT}"
+  sleep 1
+done
+
+say "Creating feedback form"
+API_BASE="http://127.0.0.1:${BACKEND_PORT}/api" pnpm tsx scripts/create-feedback-form.mts
+
+# Free as much memory as possible for the rebuild: the form is already
+# created, so stop both PM2 apps AND the DB container while web builds.
+say "Stopping PM2 apps + DB to free memory for the web rebuild"
+pm2 stop all
+docker compose stop
+
+say "Rebuilding web so the feedback URL is baked in"
+pnpm --filter web build
+
+say "Restarting DB and apps"
+docker compose start
+for i in $(seq 1 30); do
+  docker exec postgresdb-typeform pg_isready -U postgres >/dev/null 2>&1 && { echo "  ✓ Postgres ready"; break; }
+  [ "$i" -eq 30 ] && die "Postgres did not come back up after web rebuild"
+  sleep 1
+done
+pm2 restart all
 
 # ─── Done ──────────────────────────────────────────────────────────────────
 
