@@ -5,12 +5,20 @@ services:
     container_name: postgresdb-typeform
 
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: typeform
+      # Credentials come from the repo-root .env (read automatically by
+      # docker compose). Dev falls back to postgres/postgres; prod values
+      # are written by `bash setup.sh --prod`. Keep these in sync with
+      # DATABASE_URL in apps/api/.env and packages/database/.env.
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-typeform}
 
     ports:
-      - "5432:5432"
+      # Bind to loopback only. The DB is reachable from processes on this
+      # host (the backend) but NOT from the public internet. Do NOT change
+      # this to "5432:5432" — that binds 0.0.0.0 and is how the DB was
+      # ransomed. Containers needing access should share a compose network.
+      - "127.0.0.1:5432:5432"
 
     volumes:
       - pg_data:/var/lib/postgresql/data

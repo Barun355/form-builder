@@ -7,14 +7,21 @@
 # `generate` get a fresh random value on first run.
 #
 # Usage:
-#   bash setup.sh                  # dev mode — localhost defaults
-#   bash setup.sh --prod           # prod mode — prompts for backend & frontend URLs
+#   bash setup.sh                  # dev mode — localhost defaults, no prompts
+#   bash setup.sh --prod           # prod mode — prompts for URLs, DB + mail creds
 #   bash setup.sh --force          # rewrite every file from manifest (regenerates JWT_SECRET!)
 #   bash setup.sh --prod --force   # both
 #
-# Non-interactive prod (CI / scripted):
+# In --prod the script prompts for: backend/frontend URLs, Postgres
+# user/password/db (blank password → auto-generated), and mail credentials.
+# It writes a repo-root .env with POSTGRES_* for docker-compose and derives
+# DATABASE_URL from the same values so they never drift.
+#
+# Non-interactive prod (CI / scripted) — pre-set any of these to skip prompts:
 #   BACKEND_URL=https://api.example.com \
 #   FRONTEND_URL=https://app.example.com \
+#   POSTGRES_USER=postgres POSTGRES_PASSWORD=… POSTGRES_DB=typeform \
+#   MAIL_PROVIDER=resend RESEND_API_KEY=… \
 #   bash setup.sh --prod
 #
 # Requirements:
@@ -70,6 +77,35 @@ prompt_url() {
   done
 }
 
+# Plain-text prompt with an optional default. Returns the default on empty
+# input. Honors a pre-set env var of the same name (CI / scripted runs).
+prompt_value() {
+  local label="$1"
+  local default="${2:-}"
+  local value
+  if [ -n "$default" ]; then
+    read -r -p "  $label [$default]: " value
+    echo "${value:-$default}"
+  else
+    read -r -p "  $label: " value
+    echo "$value"
+  fi
+}
+
+# Secret prompt (no echo). Blank input mints a strong, URL-safe value so it
+# drops into a connection string without percent-encoding headaches.
+prompt_secret_or_generate() {
+  local label="$1"
+  local value
+  read -r -s -p "  $label (blank = auto-generate): " value
+  echo "" >&2
+  if [ -z "$value" ]; then
+    value=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)
+    echo "    ✓ generated: $value   (save it — shown only once)" >&2
+  fi
+  echo "$value"
+}
+
 declare -A OVERRIDES
 
 if [ "$MODE" = "prod" ]; then
@@ -98,6 +134,53 @@ if [ "$MODE" = "prod" ]; then
   OVERRIDES[NEXT_PUBLIC_API_URL]="${BACKEND_URL}/trpc"
   OVERRIDES[NEXT_PUBLIC_APP_ORIGIN]="$FRONTEND_URL"
   OVERRIDES[LOGGER_LEVEL]="info"
+
+  # ─── Database credentials ───────────────────────────────────────────
+  # The backend connects over loopback (Postgres is bound to 127.0.0.1 by
+  # docker-compose), so host stays localhost. User/password are real prod
+  # secrets — prompt for them, then derive DATABASE_URL and the compose
+  # credentials from the same values so they can never drift apart.
+  echo ""
+  echo "▸ Database credentials (Postgres runs in Docker, bound to 127.0.0.1)"
+  : "${POSTGRES_USER:=}"
+  : "${POSTGRES_PASSWORD:=}"
+  : "${POSTGRES_DB:=}"
+  [ -z "$POSTGRES_USER" ] && POSTGRES_USER=$(prompt_value "DB username" "postgres")
+  [ -z "$POSTGRES_PASSWORD" ] && POSTGRES_PASSWORD=$(prompt_secret_or_generate "DB password")
+  [ -z "$POSTGRES_DB" ] && POSTGRES_DB=$(prompt_value "DB name" "typeform")
+
+  OVERRIDES[DATABASE_URL]="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+
+  # Credentials docker-compose reads from the repo-root .env. Written below
+  # after we know FORCE handling — kept in this var for now.
+  DOCKER_ENV_WRITE=1
+
+  # ─── Mail credentials ───────────────────────────────────────────────
+  echo ""
+  echo "▸ Mail credentials"
+  : "${MAIL_PROVIDER:=}"
+  [ -z "$MAIL_PROVIDER" ] && MAIL_PROVIDER=$(prompt_value "Mail provider (nodemailer|resend)" "nodemailer")
+  OVERRIDES[MAIL_PROVIDER]="$MAIL_PROVIDER"
+  OVERRIDES[MAIL_FROM]=$(prompt_value "From address" "Simple Form <no-reply@simpleform.local>")
+  OVERRIDES[APP_ORIGIN]="$FRONTEND_URL"
+
+  if [ "$MAIL_PROVIDER" = "resend" ]; then
+    : "${RESEND_API_KEY:=}"
+    [ -z "$RESEND_API_KEY" ] && RESEND_API_KEY=$(prompt_value "Resend API key")
+    OVERRIDES[RESEND_API_KEY]="$RESEND_API_KEY"
+  else
+    : "${SMTP_HOST:=}"; : "${SMTP_PORT:=}"; : "${SMTP_USER:=}"; : "${SMTP_PASS:=}"; : "${SMTP_SECURE:=}"
+    [ -z "$SMTP_HOST" ] && SMTP_HOST=$(prompt_value "SMTP host" "localhost")
+    [ -z "$SMTP_PORT" ] && SMTP_PORT=$(prompt_value "SMTP port" "587")
+    [ -z "$SMTP_USER" ] && SMTP_USER=$(prompt_value "SMTP user")
+    [ -z "$SMTP_PASS" ] && SMTP_PASS=$(prompt_secret_or_generate "SMTP password")
+    [ -z "$SMTP_SECURE" ] && SMTP_SECURE=$(prompt_value "SMTP secure (true|false)" "false")
+    OVERRIDES[SMTP_HOST]="$SMTP_HOST"
+    OVERRIDES[SMTP_PORT]="$SMTP_PORT"
+    OVERRIDES[SMTP_USER]="$SMTP_USER"
+    OVERRIDES[SMTP_PASS]="$SMTP_PASS"
+    OVERRIDES[SMTP_SECURE]="$SMTP_SECURE"
+  fi
 
   echo ""
 fi
@@ -216,10 +299,9 @@ for target in $(all_targets); do
         echo "  + $target ← $key"
       elif [ "${OVERRIDES[$key]+x}" ]; then
         # Key exists AND has a prod-override → update in place. This is the
-        # whole point of `--prod`: the URL-derived vars MUST reflect the
-        # values the user just typed in. Generated secrets (JWT_SECRET) and
-        # user-edited values (DATABASE_URL) have no override so they're
-        # preserved.
+        # whole point of `--prod`: URL-derived vars, the prompted
+        # DATABASE_URL and mail credentials MUST reflect what the operator
+        # just entered. JWT_SECRET has no override, so it's preserved.
         current=$(grep -E "^${key}=" "$target" | head -1 | cut -d= -f2-)
         want="${RESOLVED[$key]}"
         if [ "$current" != "$want" ]; then
@@ -253,6 +335,26 @@ for target in $(all_targets); do
     created=$((created + 1))
   fi
 done
+
+# ─── docker-compose credentials (prod only) ──────────────────────────────
+# docker compose auto-reads a repo-root .env for ${POSTGRES_*} interpolation.
+# Write it in prod so the container is created with the same credentials
+# baked into DATABASE_URL above. Dev needs no file — compose falls back to
+# the postgres/postgres/typeform defaults in docker-compose.yml. This file
+# is gitignored (.env) and must never be committed.
+if [ "$MODE" = "prod" ] && [ "${DOCKER_ENV_WRITE:-0}" = "1" ]; then
+  {
+    echo "# ═══════════════════════════════════════════════════════════════"
+    echo "# docker-compose credentials — generated by setup.sh --prod"
+    echo "# Consumed by docker-compose.yml \${POSTGRES_*} interpolation."
+    echo "# Keep in sync with DATABASE_URL in apps/api/.env. DO NOT COMMIT."
+    echo "# ═══════════════════════════════════════════════════════════════"
+    echo "POSTGRES_USER=${POSTGRES_USER}"
+    echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+    echo "POSTGRES_DB=${POSTGRES_DB}"
+  } > .env
+  echo "✓ .env (docker-compose POSTGRES_* credentials)"
+fi
 
 # ─── Regenerate root .env.example as a flat reference ────────────────────
 # Always uses MANIFEST DEFAULTS (the dev-localhost values), not prod

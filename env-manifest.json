@@ -23,7 +23,7 @@
     },
     "DATABASE_URL": {
       "default": "postgresql://postgres:postgres@localhost:5432/typeform",
-      "comment": "Postgres connection string. Stays local-first; override per-environment after setup if needed.",
+      "comment": "Postgres connection string. Dev uses these localhost defaults; setup.sh --prod prompts for DB user/password and derives this. Host stays localhost — Postgres is bound to 127.0.0.1 by docker-compose.",
       "targets": ["apps/api/.env", "packages/database/.env"]
     },
     "JWT_SECRET": {
