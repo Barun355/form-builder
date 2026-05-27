@@ -149,7 +149,9 @@ if [ "$MODE" = "prod" ]; then
   [ -z "$POSTGRES_PASSWORD" ] && POSTGRES_PASSWORD=$(prompt_secret_or_generate "DB password")
   [ -z "$POSTGRES_DB" ] && POSTGRES_DB=$(prompt_value "DB name" "typeform")
 
-  OVERRIDES[DATABASE_URL]="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+  # Use 127.0.0.1, not localhost: Docker publishes the port IPv4-only
+  # (127.0.0.1:5432), but localhost can resolve to IPv6 ::1 first and fail.
+  OVERRIDES[DATABASE_URL]="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}"
 
   # Credentials docker-compose reads from the repo-root .env. Written below
   # after we know FORCE handling — kept in this var for now.
