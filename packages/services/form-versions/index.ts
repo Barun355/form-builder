@@ -2,7 +2,6 @@ import { and, count, db, desc, eq } from "@repo/database";
 import { formTable } from "@repo/database/models/form";
 import { formVersionsTable } from "@repo/database/models/form-versions";
 import { formSubmissionsTable } from "@repo/database/models/form-submissions";
-import { assertCanReferenceTheme } from "../theme-guard";
 
 import {
   deleteVersionInput,
@@ -60,17 +59,11 @@ class FormVersionService {
   public async saveDraft(
     payload: SaveDraftInputType,
   ): Promise<SaveDraftOutputType> {
-    const { formId, schema, requestedBy, themeId } =
+    const { formId, schema, requestedBy } =
       await saveDraftInput.parseAsync(payload);
 
-    // Cross-tenant safety: if the caller is attaching a theme id, run
-    // it through the visibility check BEFORE persisting. Owner or
-    // PUBLIC themes pass; PRIVATE themes owned by anyone else throw
-    // "Theme not found". `null` is the explicit-detach signal and
-    // skips the check; `undefined` means "leave alone."
-    if (themeId !== undefined && themeId !== null) {
-      await assertCanReferenceTheme(themeId, requestedBy);
-    }
+    // Theme is on the form (not on the version), so saveDraft has nothing
+    // to do with themes anymore. Schema changes only.
 
     return await db.transaction(async (tx) => {
       const [form] = await tx
@@ -95,30 +88,21 @@ class FormVersionService {
 
       let saved;
       if (latest.id === form.publishedVersionId) {
-        // Frozen — insert new draft v(n+1). Inherit themeId from the
-        // published version when the caller didn't pass one, so a save
-        // that only edits the schema doesn't accidentally drop the
-        // theme attachment.
+        // Frozen — insert new draft v(n+1).
         const inserted = await tx
           .insert(formVersionsTable)
           .values({
             formId,
             version: latest.version + 1,
             schema,
-            themeId: themeId === undefined ? latest.themeId : themeId,
           })
           .returning();
         saved = inserted[0];
       } else {
-        // Mutable draft — update in place. Patch contains themeId only
-        // when explicitly provided (incl. null → detach).
-        const patch: { schema: typeof schema; themeId?: string | null } = {
-          schema,
-        };
-        if (themeId !== undefined) patch.themeId = themeId;
+        // Mutable draft — update in place.
         const updated = await tx
           .update(formVersionsTable)
-          .set(patch)
+          .set({ schema })
           .where(eq(formVersionsTable.id, latest.id))
           .returning();
         saved = updated[0];
@@ -134,7 +118,6 @@ class FormVersionService {
         formId: saved.formId,
         version: saved.version,
         schema: saved.schema,
-        themeId: saved.themeId ?? null,
         isPublished: false,
         submissionCount,
         createdAt: saved.createdAt,
@@ -237,7 +220,6 @@ class FormVersionService {
       formId: row.version.formId,
       version: row.version.version,
       schema: row.version.schema,
-      themeId: row.version.themeId ?? null,
       isPublished:
         row.form.publishedVersionId !== null &&
         row.version.id === row.form.publishedVersionId,
@@ -287,24 +269,23 @@ class FormVersionService {
 
       let result;
       if (latest.id === form.publishedVersionId) {
-        // No editable draft → insert new v(n+1) with target's schema +
-        // theme (revert restores the historical look too).
+        // No editable draft → insert new v(n+1) with target's schema.
+        // Theme is not part of revert (it's on the form, not the
+        // version). Reverting schema doesn't touch the active theme.
         const inserted = await tx
           .insert(formVersionsTable)
           .values({
             formId: form.id,
             version: latest.version + 1,
             schema: target.schema,
-            themeId: target.themeId ?? null,
           })
           .returning();
         result = inserted[0];
       } else {
-        // Existing draft → overwrite both schema AND themeId with the
-        // target's values.
+        // Existing draft → overwrite schema with target's.
         const updated = await tx
           .update(formVersionsTable)
-          .set({ schema: target.schema, themeId: target.themeId ?? null })
+          .set({ schema: target.schema })
           .where(eq(formVersionsTable.id, latest.id))
           .returning();
         result = updated[0];
@@ -319,7 +300,6 @@ class FormVersionService {
         formId: result.formId,
         version: result.version,
         schema: result.schema,
-        themeId: result.themeId ?? null,
         isPublished: false,
         submissionCount,
         createdAt: result.createdAt,

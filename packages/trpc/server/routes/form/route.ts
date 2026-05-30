@@ -13,6 +13,8 @@ import {
   createFormOutputModel,
   duplicateFormInputModel,
   duplicateFormOutputModel,
+  setFormThemeInputModel,
+  setFormThemeOutputModel,
   getByPublicSlugInputModel,
   getByPublicSlugOutputModel,
   getFormByIdInputModel,
@@ -229,6 +231,31 @@ export const formRouter = router({
       try {
         return await formService.duplicate({
           id: input.id,
+          requestedBy: ctx.user.id,
+        });
+      } catch (err) {
+        mapServiceError(err);
+      }
+    }),
+
+  setTheme: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/setTheme"),
+        tags: TAGS,
+        summary: "Attach or detach a theme on a form (live, no re-publish)",
+        description:
+          "Updates `forms.theme_id`. Takes effect on the public form URL immediately — getByPublicSlug joins this column at request time, so the next render uses the new theme's live tokens. Pass `themeId: null` to detach (form renders System Default look).",
+      },
+    })
+    .input(setFormThemeInputModel)
+    .output(setFormThemeOutputModel)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await formService.setTheme({
+          id: input.id,
+          themeId: input.themeId,
           requestedBy: ctx.user.id,
         });
       } catch (err) {

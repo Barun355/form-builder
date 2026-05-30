@@ -2,18 +2,13 @@ import { z } from "zod";
 import { formSchemaIZod } from "./schema";
 
 // ─── saveDraft ─────────────────────────────────────────────────────────────
-//
-// `themeId` is optional and tri-state:
-//   - omitted (undefined) → leave the existing version's themeId alone
-//   - null                → explicitly detach the theme (System Default look)
-//   - uuid                → attach this theme to the draft. The service
-//                           verifies the caller can reference it via
-//                           themeService.assertCanReference before persisting.
+// Schema-only. Theme attachment is a property of the form (see
+// formService.setTheme), not of a version, so saveDraft no longer
+// touches theme.
 export const saveDraftInput = z.object({
   formId: z.uuid(),
   schema: formSchemaIZod,
   requestedBy: z.uuid(),
-  themeId: z.uuid().nullable().optional(),
 });
 export type SaveDraftInputType = z.infer<typeof saveDraftInput>;
 
@@ -22,7 +17,6 @@ const versionRowOutput = z.object({
   formId: z.uuid(),
   version: z.number().int().min(1),
   schema: z.unknown(),
-  themeId: z.uuid().nullable(),
   isPublished: z.boolean(),
   submissionCount: z.number().int().nonnegative(),
   createdAt: z.date(),

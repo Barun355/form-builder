@@ -16,8 +16,7 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { ThemePicker } from "~/components/theme-picker";
-import { useUpdateForm } from "~/hooks/form";
-import { useSaveDraft } from "~/hooks/form-versions";
+import { useSetFormTheme, useUpdateForm } from "~/hooks/form";
 import type { BuilderState, FormVisibility } from "./store";
 
 type Props = {
@@ -29,8 +28,8 @@ type Props = {
 export function FormSettingsSheet({ open, onOpenChange, state }: Props) {
   const ty = state.schema.thankYou ?? {};
   const { updateFormAsync, isPending } = useUpdateForm();
-  const { mutateAsync: saveDraftAsync, isPending: isSavingTheme } =
-    useSaveDraft();
+  const { mutateAsync: setFormThemeAsync, isPending: isSavingTheme } =
+    useSetFormTheme();
 
   async function handleVisibilityChange(makePublic: boolean) {
     const next: FormVisibility = makePublic ? "PUBLIC" : "UNLISTED";
@@ -49,20 +48,22 @@ export function FormSettingsSheet({ open, onOpenChange, state }: Props) {
     }
   }
 
-  // Theme change saves immediately via saveDraft so the attachment lives
-  // on the form's latest version. The schema travels along unchanged.
+  // Theme change is a one-shot UPDATE on `forms.theme_id` — propagates
+  // to the public URL IMMEDIATELY (live-theme model). No re-publish needed,
+  // no schema bundled.
   async function handleThemeChange(nextThemeId: string | null) {
     const prev = state.themeId;
     if (nextThemeId === prev) return;
     state.setThemeId(nextThemeId); // optimistic
     try {
-      await saveDraftAsync({
-        formId: state.formId,
-        schema: state.schema,
+      await setFormThemeAsync({
+        id: state.formId,
         themeId: nextThemeId,
       });
       toast.success(
-        nextThemeId === null ? "Theme detached" : "Theme applied",
+        nextThemeId === null
+          ? "Theme detached — form will render System Default"
+          : "Theme applied — live on the public URL",
       );
     } catch (err) {
       state.setThemeId(prev);

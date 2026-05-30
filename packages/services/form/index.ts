@@ -133,6 +133,10 @@ class FormService {
           slug,
           status: "draft",
           createdBy,
+          // Theme attachment lives on the form. Versioning tracks
+          // schema history; theme is a current-state attribute that
+          // doesn't carry per-version.
+          themeId: themeId ?? null,
         })
         .returning();
 
@@ -142,7 +146,6 @@ class FormService {
         formId: form.id,
         version: 1,
         schema: EMPTY_FORM_SCHEMA,
-        themeId: themeId ?? null,
       });
 
       return {
@@ -155,12 +158,46 @@ class FormService {
   }
 
   /**
+   * Attach a theme to a form (or detach by passing `themeId: null`).
+   *
+   * Single-shot UPDATE on `forms.theme_id`. Because theme lives on the
+   * form (not on a version), the change takes effect on the public URL
+   * IMMEDIATELY — the next `getByPublicSlug` call returns the new
+   * theme's live tokens via the JOIN. No re-publish required.
+   *
+   * Cross-tenant safety: when `themeId` is non-null, the caller must be
+   * able to reference the theme (owner OR PUBLIC). Otherwise throws
+   * "Theme not found".
+   */
+  public async setTheme(
+    payload: { id: string; themeId: string | null; requestedBy: string },
+  ): Promise<{ id: string; themeId: string | null }> {
+    const { id, themeId, requestedBy } = payload;
+
+    await this.assertOwnership({ id, requestedBy });
+
+    if (themeId !== null) {
+      await assertCanReferenceTheme(themeId, requestedBy);
+    }
+
+    await db
+      .update(formTable)
+      .set({ themeId })
+      .where(eq(formTable.id, id));
+
+    return { id, themeId };
+  }
+
+  /**
    * Returns the most recently used theme id across this user's own
-   * forms — read from the latest form_versions row per form, picked by
-   * the row's updatedAt/createdAt. Used to pre-select the theme in the
-   * "Create form" dialog so the user doesn't reach for the same theme
-   * every time. Returns `{ themeId: null }` when the user has no
-   * themed forms (first-time experience).
+   * forms. Pre-selects the theme in the "Create form" dialog so the
+   * user doesn't reach for the same theme every time. Returns
+   * `{ themeId: null }` when the user has no themed forms (first-time
+   * experience).
+   *
+   * Reads from `forms.theme_id` directly now that theme lives on the
+   * form. Sorted by `forms.updatedAt` desc — whichever form was most
+   * recently touched wins as the default.
    */
   public async lastUsedThemeId(
     payload: LastUsedThemeIdInputType,
@@ -168,22 +205,15 @@ class FormService {
     const { requestedBy } = await lastUsedThemeIdInput.parseAsync(payload);
 
     const [row] = await db
-      .select({ themeId: formVersionsTable.themeId })
-      .from(formVersionsTable)
-      .innerJoin(formTable, eq(formTable.id, formVersionsTable.formId))
+      .select({ themeId: formTable.themeId })
+      .from(formTable)
       .where(
         and(
           eq(formTable.createdBy, requestedBy),
           eq(formTable.isDeleted, false),
         ),
       )
-      // Most recently saved/created version row carrying a theme. `desc`
-      // on updatedAt with createdAt as a tiebreaker so a brand-new draft
-      // wins over an older edited one.
-      .orderBy(
-        desc(formVersionsTable.updatedAt),
-        desc(formVersionsTable.createdAt),
-      )
+      .orderBy(desc(formTable.updatedAt), desc(formTable.createdAt))
       .limit(1);
 
     return { themeId: row?.themeId ?? null };
@@ -330,7 +360,6 @@ class FormService {
           id: pv.id,
           version: pv.version,
           schema: pv.schema,
-          themeId: pv.themeId ?? null,
           createdAt: pv.createdAt,
           updatedAt: pv.updatedAt,
         };
@@ -345,13 +374,15 @@ class FormService {
       status: form.status,
       visibility: form.visibility,
       publishedVersionId: form.publishedVersionId ?? null,
+      // Theme attachment lives on the form (not the version). One value
+      // for the whole form, mutable in real time via setTheme.
+      themeId: form.themeId ?? null,
       createdAt: form.createdAt,
       updatedAt: form.updatedAt,
       latestVersion: {
         id: latestVersion.id,
         version: latestVersion.version,
         schema: latestVersion.schema,
-        themeId: latestVersion.themeId ?? null,
         createdAt: latestVersion.createdAt,
         updatedAt: latestVersion.updatedAt,
       },
@@ -461,7 +492,6 @@ class FormService {
         .select({
           id: formVersionsTable.id,
           version: formVersionsTable.version,
-          themeId: formVersionsTable.themeId,
         })
         .from(formVersionsTable)
         .where(eq(formVersionsTable.formId, id))
@@ -485,16 +515,9 @@ class FormService {
         };
       }
 
-      // LIVE-THEME MODEL: no snapshot taken at publish. The public form
-      // reads the attached theme's CURRENT tokens via JOIN
-      // (see getByPublicSlug), so theme edits propagate to all consuming
-      // forms immediately. The themeId on the published version is the
-      // pointer to the live theme; if the user attached a theme they
-      // can no longer reference (deleted etc.), we still verify it's
-      // legal at publish time to keep cross-tenant safety honest.
-      if (latest.themeId) {
-        await assertCanReferenceTheme(latest.themeId, requestedBy);
-      }
+      // Theme is on the form (not the version), so publish() doesn't
+      // touch theme at all. Theme cross-tenant safety is enforced at
+      // setTheme/createForm time, not here.
 
       await tx
         .update(formTable)
@@ -695,6 +718,10 @@ class FormService {
     const { userSlug, formSlug } =
       await getByPublicSlugInput.parseAsync(payload);
 
+    // Live-theme: theme attachment is on the FORM (not on the version).
+    // Theme swaps and edits both propagate to the public URL immediately,
+    // no re-publish required. Joined directly here so a single round-trip
+    // returns everything the renderer needs.
     const [row] = await db
       .select({
         id: formTable.id,
@@ -703,9 +730,17 @@ class FormService {
         status: formTable.status,
         publishedVersionId: formTable.publishedVersionId,
         isDeleted: formTable.isDeleted,
+        themeTokens: themesTable.tokens,
       })
       .from(formTable)
       .innerJoin(usersTable, eq(usersTable.id, formTable.createdBy))
+      .leftJoin(
+        themesTable,
+        and(
+          eq(themesTable.id, formTable.themeId),
+          eq(themesTable.isDeleted, false),
+        ),
+      )
       .where(
         and(
           eq(usersTable.userGlobalFormSlug, userSlug),
@@ -719,26 +754,13 @@ class FormService {
     if (row.status !== "published" && row.status !== "closed") return null;
     if (!row.publishedVersionId) return null;
 
-    // LIVE-THEME MODEL: join the published version onto its currently-
-    // attached theme. Edits to the theme propagate to all consuming forms
-    // immediately — no re-publish required. Soft-deleted themes (or
-    // detached themes) fall back to `theme: null`, which the renderer
-    // paints as System Default.
     const [version] = await db
       .select({
         id: formVersionsTable.id,
         version: formVersionsTable.version,
         schema: formVersionsTable.schema,
-        themeTokens: themesTable.tokens,
       })
       .from(formVersionsTable)
-      .leftJoin(
-        themesTable,
-        and(
-          eq(themesTable.id, formVersionsTable.themeId),
-          eq(themesTable.isDeleted, false),
-        ),
-      )
       .where(eq(formVersionsTable.id, row.publishedVersionId))
       .limit(1);
 
@@ -754,9 +776,9 @@ class FormService {
         version: version.version,
         schema: version.schema,
       },
-      // Live theme tokens from the attached theme row. `null` when no
-      // theme is attached OR the attached theme is soft-deleted.
-      theme: version.themeTokens ?? null,
+      // Live theme tokens from the form's attached theme. `null` when
+      // no theme is attached OR the attached theme is soft-deleted.
+      theme: row.themeTokens ?? null,
     };
   }
 
@@ -853,10 +875,7 @@ class FormService {
       }
 
       const [sourceLatest] = await tx
-        .select({
-          schema: formVersionsTable.schema,
-          themeId: formVersionsTable.themeId,
-        })
+        .select({ schema: formVersionsTable.schema })
         .from(formVersionsTable)
         .where(eq(formVersionsTable.formId, id))
         .orderBy(desc(formVersionsTable.version))
@@ -864,6 +883,22 @@ class FormService {
 
       if (!sourceLatest) {
         throw new Error("Internal: source form has no versions");
+      }
+
+      // Duplicate inherits the source FORM's theme attachment (themeId
+      // is now on forms, not on form_versions). The requester already
+      // owns the source form, so by transitivity they can reference its
+      // theme — duplicate() requires ownership of the source. Defensive
+      // assertCanReferenceTheme stays for the corner case where a
+      // theme was attached then deleted (themeId still set, theme gone).
+      let inheritedThemeId: string | null = null;
+      if (sourceForm.themeId) {
+        try {
+          await assertCanReferenceTheme(sourceForm.themeId, requestedBy);
+          inheritedThemeId = sourceForm.themeId;
+        } catch {
+          inheritedThemeId = null;
+        }
       }
 
       const newTitle = `Copy of ${sourceForm.title}`.slice(0, 55);
@@ -877,6 +912,7 @@ class FormService {
           slug: newSlug,
           status: "draft",
           createdBy: requestedBy,
+          themeId: inheritedThemeId,
         })
         .returning();
 
@@ -884,28 +920,10 @@ class FormService {
         throw new Error("Internal: failed to insert duplicate form");
       }
 
-      // The duplicate inherits the source's themeId only when the
-      // requester can still reference that theme (owner-or-public). If
-      // the source theme was private+owned by someone else and the
-      // requester duplicated a public form, the source theme isn't
-      // visible — fall back to no-theme. This call is a defensive
-      // double-check; duplicate() itself already requires ownership
-      // of the source form, so in practice this passes.
-      let inheritedThemeId: string | null = null;
-      if (sourceLatest.themeId) {
-        try {
-          await assertCanReferenceTheme(sourceLatest.themeId, requestedBy);
-          inheritedThemeId = sourceLatest.themeId;
-        } catch {
-          inheritedThemeId = null;
-        }
-      }
-
       await tx.insert(formVersionsTable).values({
         formId: newForm.id,
         version: 1,
         schema: sourceLatest.schema,
-        themeId: inheritedThemeId,
       });
 
       return {

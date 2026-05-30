@@ -15,7 +15,6 @@ import {
   type SelectTheme,
 } from "@repo/database/models/theme";
 import { formTable } from "@repo/database/models/form";
-import { formVersionsTable } from "@repo/database/models/form-versions";
 import { usersTable } from "@repo/database/models/user";
 
 import {
@@ -468,15 +467,14 @@ class ThemeService {
   }
 
   // ─── assertCanReference (cross-tenant safety choke-point) ────────────
-  // Called by form.createForm and formVersions.saveDraft before they
-  // write `themeId` onto a form_versions row. Throws "Theme not found"
+  // Called by form.createForm, form.setTheme, and form.duplicate before
+  // they write `themeId` onto a `forms` row. Throws "Theme not found"
   // if the caller cannot reference the theme — owner-or-public are the
-  // only valid cases. Returns the theme on success so callers can read
-  // `tokens` for the publish snapshot.
+  // only valid cases. Returns the theme on success.
   //
-  // ⚠️  If a NEW caller ever writes form_versions.theme_id, it MUST go
-  // through this method first. This is the single trust boundary for
-  // cross-tenant theme references.
+  // ⚠️  Any code path that writes a `themeId` onto a form MUST go
+  // through this method (or its inline equivalent in `theme-guard.ts`)
+  // first. Single trust boundary for cross-tenant theme references.
 
   public async assertCanReference(
     payload: AssertCanReferenceInputType,
@@ -510,18 +508,16 @@ class ThemeService {
     // PRIVATE themes owned by someone else.
     await this.loadVisibleTheme(id, requestedBy);
 
+    // Theme attachment lives on the form. Count published forms whose
+    // form.theme_id points at this theme.
     const [row] = await db
       .select({ cnt: count() })
       .from(formTable)
-      .innerJoin(
-        formVersionsTable,
-        eq(formVersionsTable.id, formTable.publishedVersionId),
-      )
       .where(
         and(
           eq(formTable.status, "published"),
           eq(formTable.isDeleted, false),
-          eq(formVersionsTable.themeId, id),
+          eq(formTable.themeId, id),
         ),
       );
 

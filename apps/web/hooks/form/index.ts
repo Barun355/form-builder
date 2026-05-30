@@ -173,6 +173,22 @@ export const useDuplicateForm = () => {
 
 // ─── State transitions ─────────────────────────────────────────────────────
 
+/**
+ * Live theme attach/detach. Single UPDATE on `forms.theme_id`; the public
+ * URL reflects the new theme on its next render (no re-publish needed).
+ * Invalidates `form.getFormById` so the builder picks up the change.
+ */
+export const useSetFormTheme = () => {
+  const utils = trpc.useUtils();
+  return trpc.form.setTheme.useMutation({
+    onSuccess: (data) => {
+      utils.form.getFormById.invalidate({ id: data.id });
+      // Also invalidate the lastUsedThemeId default for the new-form dialog.
+      utils.form.lastUsedThemeId.invalidate();
+    },
+  });
+};
+
 export const usePublishForm = () => {
   const utils = trpc.useUtils();
   return trpc.form.publishForm.useMutation({

@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { usersTable } from "./user";
 import { formVersionsTable } from "./form-versions";
+import { themesTable } from "./theme";
 
 
 export const FormStats = pgEnum("form_status", ["draft", "published", "archived", "closed"])
@@ -32,6 +33,14 @@ export const formTable = pgTable("forms", {
 
     publishedVersionId: uuid("published_version_id").references((): AnyPgColumn => formVersionsTable.id),
 
+    // Live theme attachment. Lives on the form (not the version row) so
+    // theme swaps take effect on the public URL immediately, without
+    // re-publishing. Schema versioning (form_versions) and visual
+    // theming are intentionally separate concerns: versioning is for
+    // history-preserving form structure changes; theme is a current-
+    // state cosmetic attribute. See form/index.ts:getByPublicSlug.
+    themeId: uuid("theme_id").references(() => themesTable.id),
+
     isDeleted: boolean("is_deleted").notNull().default(false),
 
     createdAt: timestamp("created_at").defaultNow(),
@@ -40,4 +49,5 @@ export const formTable = pgTable("forms", {
   unique("forms_created_by_slug_unique").on(table.createdBy, table.slug),
   index("forms_created_by_idx").on(table.createdBy),
   index("forms_published_version_id_idx").on(table.publishedVersionId),
+  index("forms_theme_id_idx").on(table.themeId),
 ])

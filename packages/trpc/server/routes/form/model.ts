@@ -23,12 +23,6 @@ const formVersionEmbeddedModel = z.object({
   id: z.uuid().describe("UUID of the version row"),
   version: z.number().int().min(1).describe("Monotonic version number"),
   schema: z.unknown().describe("Form schema as FormSchemaI JSON"),
-  themeId: z
-    .uuid()
-    .nullable()
-    .describe(
-      "Theme attached to this version. null = System Default. Snapshot of tokens lives on the row at publish time.",
-    ),
   createdAt: z.date().describe("When the version was created"),
   updatedAt: z.date().nullable().describe("When the version was last updated"),
 });
@@ -153,6 +147,12 @@ export const getFormByIdOutputModel = z.object({
   status: formStatusEnum,
   visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
+  themeId: z
+    .uuid()
+    .nullable()
+    .describe(
+      "Currently attached theme. Lives on the form, mutable in real time via form.setTheme. The public URL reads this theme's live tokens via JOIN at render time — no re-publish required for theme edits or swaps.",
+    ),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
   latestVersion: formVersionEmbeddedModel,
@@ -199,6 +199,25 @@ export const duplicateFormOutputModel = z.object({
   title: z.string(),
   slug: z.string(),
   status: formStatusEnum,
+});
+
+// ─── setTheme ─────────────────────────────────────────────────────────────
+// Attach (or detach with `themeId: null`) the form's live theme. Single
+// UPDATE on `forms.theme_id`; takes effect on the public URL immediately
+// because getByPublicSlug joins on this column at request time.
+export const setFormThemeInputModel = z.object({
+  id: z.uuid(),
+  themeId: z
+    .uuid()
+    .nullable()
+    .describe(
+      "Theme to attach. null detaches (form renders System Default look). Must be owned by the caller OR PUBLIC.",
+    ),
+});
+
+export const setFormThemeOutputModel = z.object({
+  id: z.uuid(),
+  themeId: z.uuid().nullable(),
 });
 
 // ─── State transitions ─────────────────────────────────────────────────────

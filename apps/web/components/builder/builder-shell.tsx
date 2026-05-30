@@ -74,7 +74,9 @@ export function BuilderShell({ formId }: Props) {
       visibility: form.visibility,
       publishedVersionId: form.publishedVersionId ?? null,
       schema: latest.schema as never,
-      themeId: latest.themeId ?? null,
+      // Theme lives on the form (not on the version row). Read it from
+      // the top-level form payload.
+      themeId: form.themeId ?? null,
       versions: versions.map((v) => ({
         id: v.id,
         version: v.version,

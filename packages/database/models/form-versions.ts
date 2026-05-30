@@ -9,7 +9,6 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { formTable } from "./form";
-import { themesTable } from "./theme";
 
 export type FieldType =
   | "text"
@@ -124,13 +123,9 @@ export const formVersionsTable = pgTable("form_versions", {
 
   schema: jsonb("schema").$type<FormSchemaType>().notNull(),
 
-  // Optional theme reference. The public form fetches the attached
-  // theme's tokens LIVE via JOIN on themes (see
-  // formService.getByPublicSlug), so edits to the theme propagate to
-  // every consuming form on next render. No snapshot is taken at
-  // publish time; soft-deleting the theme falls the form back to the
-  // System Default look.
-  themeId: uuid("theme_id").references(() => themesTable.id),
+  // Theme attachment moved off the version row onto `forms.theme_id`
+  // (live-theme model — see forms model + formService.getByPublicSlug).
+  // Versioning carries schema history; theme is a current-state attribute.
 
   isDeleted: boolean("is_deleted").notNull().default(false),
 
@@ -139,5 +134,4 @@ export const formVersionsTable = pgTable("form_versions", {
 }, (table) => [
   unique("form_id_version_unique").on(table.formId, table.version),
   index("form_versions_form_id_idx").on(table.formId),
-  index("form_versions_theme_id_idx").on(table.themeId),
 ]);

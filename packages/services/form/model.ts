@@ -21,9 +21,8 @@ const slugShape = z
 // ─── create ────────────────────────────────────────────────────────────────
 // `themeId` is optional:
 //   - omitted/null → form starts with no theme (renders System Default)
-//   - uuid         → service verifies the caller can reference it
-//                    (themeService.assertCanReference) and stores it on
-//                    the v1 form_versions row.
+//   - uuid         → service verifies the caller can reference it and
+//                    stores it on `forms.theme_id`.
 export const createFormInput = z.object({
   title: z.string().trim().min(1).max(55),
   description: z.string().trim().max(255).optional(),
@@ -39,6 +38,23 @@ export const createFormOutput = z.object({
   status: formStatusEnum,
 });
 export type CreateFormOutputType = z.infer<typeof createFormOutput>;
+
+// ─── setTheme ─────────────────────────────────────────────────────────────
+// Live theme attachment. `themeId: null` detaches; uuid attaches (subject
+// to cross-tenant assertCanReferenceTheme). Single UPDATE on forms.theme_id;
+// no version row touched.
+export const setFormThemeInput = z.object({
+  id: z.uuid(),
+  themeId: z.uuid().nullable(),
+  requestedBy: z.uuid(),
+});
+export type SetFormThemeInputType = z.infer<typeof setFormThemeInput>;
+
+export const setFormThemeOutput = z.object({
+  id: z.uuid(),
+  themeId: z.uuid().nullable(),
+});
+export type SetFormThemeOutputType = z.infer<typeof setFormThemeOutput>;
 
 // ─── lastUsedThemeId ──────────────────────────────────────────────────────
 export const lastUsedThemeIdInput = z.object({
@@ -98,7 +114,6 @@ const formVersionEmbedded = z.object({
   id: z.uuid(),
   version: z.number().int().min(1),
   schema: z.unknown(),
-  themeId: z.uuid().nullable(),
   createdAt: z.date(),
   updatedAt: z.date().nullable(),
 });
@@ -111,6 +126,9 @@ export const getFormByIdOutput = z.object({
   status: formStatusEnum,
   visibility: formVisibilityEnum,
   publishedVersionId: z.uuid().nullable(),
+  // Theme attachment is on the form (not on the version row). One value
+  // for the whole form, mutable in real time via form.setTheme.
+  themeId: z.uuid().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
   latestVersion: formVersionEmbedded,

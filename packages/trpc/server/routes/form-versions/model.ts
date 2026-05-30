@@ -5,12 +5,6 @@ const versionRowModel = z.object({
   formId: z.uuid(),
   version: z.number().int().min(1),
   schema: z.unknown().describe("Form schema (FormSchemaI JSON)"),
-  themeId: z
-    .uuid()
-    .nullable()
-    .describe(
-      "Theme attached to this version. null = System Default look. Live-theme model: the public form reads the attached theme's current tokens via JOIN at render time, no snapshot taken.",
-    ),
   isPublished: z.boolean(),
   submissionCount: z.number().int().nonnegative(),
   createdAt: z.date(),
@@ -28,16 +22,11 @@ const versionListItemModel = z.object({
 });
 
 // ─── saveDraft ─────────────────────────────────────────────────────────────
+// Schema-only. Theme attachment is a property of the form (see
+// form.setTheme), not of a version.
 export const saveDraftInputModel = z.object({
   formId: z.uuid().describe("UUID of the form being edited"),
   schema: z.unknown().describe("Form schema (FormSchemaI JSON)"),
-  themeId: z
-    .uuid()
-    .nullable()
-    .optional()
-    .describe(
-      "Theme to attach to this draft. Omit to leave the existing attachment alone; null to detach (System Default look); uuid to attach (verified via themeService.assertCanReference).",
-    ),
 });
 export const saveDraftOutputModel = versionRowModel;
 
