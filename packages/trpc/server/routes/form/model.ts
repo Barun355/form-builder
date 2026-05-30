@@ -23,6 +23,12 @@ const formVersionEmbeddedModel = z.object({
   id: z.uuid().describe("UUID of the version row"),
   version: z.number().int().min(1).describe("Monotonic version number"),
   schema: z.unknown().describe("Form schema as FormSchemaI JSON"),
+  themeId: z
+    .uuid()
+    .nullable()
+    .describe(
+      "Theme attached to this version. null = System Default. Snapshot of tokens lives on the row at publish time.",
+    ),
   createdAt: z.date().describe("When the version was created"),
   updatedAt: z.date().nullable().describe("When the version was last updated"),
 });
@@ -36,6 +42,13 @@ export const createFormInputModel = z.object({
     .max(255)
     .optional()
     .describe("Optional form description"),
+  themeId: z
+    .uuid()
+    .nullable()
+    .optional()
+    .describe(
+      "Optional theme to attach to the form's first version. Must be owned by the caller OR PUBLIC; otherwise the server returns NOT_FOUND.",
+    ),
 });
 
 // Notification surfaced when a publishForm call was the user's first
@@ -233,6 +246,11 @@ export const getByPublicSlugOutputModel = z
     description: z.string().nullable(),
     status: z.enum(["published", "closed"]),
     publishedVersion: publicVersionModel,
+    // Snapshot of theme tokens captured at form publish time. Owned by
+    // the form, so deletes/edits to the source theme can't break it.
+    // Schema kept loose here (z.unknown) — clients type it as
+    // ThemeTokensI from @repo/theme.
+    theme: z.unknown().nullable(),
   })
   .nullable();
 
@@ -266,4 +284,18 @@ const publicListItemModel = z.object({
 export const listPublicOutputModel = z.object({
   items: z.array(publicListItemModel),
   totalCount: z.number().int().nonnegative(),
+});
+
+// ─── lastUsedThemeId ──────────────────────────────────────────────────────
+// No client-side input — `requestedBy` comes from the session. tRPC
+// requires an input schema so we declare an empty object.
+export const lastUsedThemeIdInputModel = z.object({});
+
+export const lastUsedThemeIdOutputModel = z.object({
+  themeId: z
+    .uuid()
+    .nullable()
+    .describe(
+      "Most recently used theme id across the caller's own forms, or null if they have no themed forms.",
+    ),
 });

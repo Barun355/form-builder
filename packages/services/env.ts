@@ -17,6 +17,14 @@ const envSchema = z
       .positive()
       .default(30)
       .describe("Per-IP submission start/complete cap, per 60s window."),
+    RATE_LIMIT_THEME_PER_MIN: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30)
+      .describe(
+        "Per-user theme write (create/update/duplicate/publish/etc.) cap, per 60s window.",
+      ),
   })
   .superRefine((val, ctx) => {
     if (val.NODE_ENV === "production" && val.JWT_SECRET.length < 32) {

@@ -52,6 +52,7 @@ export const formVersionRouter = router({
           formId: input.formId,
           schema: input.schema as never,
           requestedBy: ctx.user.id,
+          themeId: input.themeId,
         });
       } catch (err) {
         mapServiceError(err);

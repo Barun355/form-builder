@@ -19,10 +19,16 @@ const slugShape = z
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with single hyphens");
 
 // ─── create ────────────────────────────────────────────────────────────────
+// `themeId` is optional:
+//   - omitted/null → form starts with no theme (renders System Default)
+//   - uuid         → service verifies the caller can reference it
+//                    (themeService.assertCanReference) and stores it on
+//                    the v1 form_versions row.
 export const createFormInput = z.object({
   title: z.string().trim().min(1).max(55),
   description: z.string().trim().max(255).optional(),
   createdBy: z.uuid(),
+  themeId: z.uuid().nullable().optional(),
 });
 export type CreateFormInputType = z.infer<typeof createFormInput>;
 
@@ -33,6 +39,17 @@ export const createFormOutput = z.object({
   status: formStatusEnum,
 });
 export type CreateFormOutputType = z.infer<typeof createFormOutput>;
+
+// ─── lastUsedThemeId ──────────────────────────────────────────────────────
+export const lastUsedThemeIdInput = z.object({
+  requestedBy: z.uuid(),
+});
+export type LastUsedThemeIdInputType = z.infer<typeof lastUsedThemeIdInput>;
+
+export const lastUsedThemeIdOutput = z.object({
+  themeId: z.uuid().nullable(),
+});
+export type LastUsedThemeIdOutputType = z.infer<typeof lastUsedThemeIdOutput>;
 
 // ─── list ──────────────────────────────────────────────────────────────────
 export const listFormsInput = z.object({
@@ -81,6 +98,7 @@ const formVersionEmbedded = z.object({
   id: z.uuid(),
   version: z.number().int().min(1),
   schema: z.unknown(),
+  themeId: z.uuid().nullable(),
   createdAt: z.date(),
   updatedAt: z.date().nullable(),
 });
@@ -223,6 +241,11 @@ export const publicFormDetail = z.object({
   description: z.string().nullable(),
   status: z.enum(["published", "closed"]),
   publishedVersion: publicVersionEmbedded,
+  // Theme tokens snapshot captured at form publish time. NULL when the
+  // form has no theme attached. Owned by the form (not the theme owner),
+  // so deletes/edits to the source theme never break already-published
+  // forms.
+  theme: z.unknown().nullable(),
 });
 export type PublicFormDetailType = z.infer<typeof publicFormDetail>;
 

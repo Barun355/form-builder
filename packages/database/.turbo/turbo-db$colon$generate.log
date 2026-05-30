@@ -1,14 +1,14 @@
 
-
 > @repo/database@1.0.0 db:generate /home/localhost/Desktop/web-dev-cohort-2026/hackathon/typeform/packages/database
 > dotenv -- drizzle-kit generate
 
-[90mNo config path provided, using default 'drizzle.config.ts'[39m
-[90mReading config file '/home/localhost/Desktop/web-dev-cohort-2026/hackathon/typeform/packages/database/drizzle.config.ts'[39m
-[1m4 tables[22m
-[1m[22m[1m[34musers[39m[22m [90m13 columns 0 indexes 0 fks[39m
-[1m[34mforms[39m[22m [90m10 columns 2 indexes 2 fks[39m
-[1m[34mform_submissions[39m[22m [90m11 columns 3 indexes 2 fks[39m
-[1m[34mform_versions[39m[22m [90m7 columns 1 indexes 1 fks[39m
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/localhost/Desktop/web-dev-cohort-2026/hackathon/typeform/packages/database/drizzle.config.ts'
+5 tables
+users 13 columns 0 indexes 0 fks
+forms 11 columns 2 indexes 2 fks
+form_submissions 11 columns 3 indexes 2 fks
+form_versions 8 columns 2 indexes 2 fks
+themes 11 columns 2 indexes 1 fks
 
-No schema changes, nothing to migrate 😴
+[✓] Your SQL migration file ➜ drizzle/0006_modern_skrulls.sql 🚀

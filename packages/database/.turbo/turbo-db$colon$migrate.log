@@ -5,4 +5,4 @@
 No config path provided, using default 'drizzle.config.ts'
 Reading config file '/home/localhost/Desktop/web-dev-cohort-2026/hackathon/typeform/packages/database/drizzle.config.ts'
 Using 'pg' driver for database querying
-[⣷] applying migrations...[2K[1G[✓] migrations applied successfully!
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[⢿] applying migrations...[2K[1G[⣻] applying migrations...[2K[1G[⣽] applying migrations...[2K[1G[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[✓] migrations applied successfully!

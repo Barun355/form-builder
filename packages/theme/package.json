@@ -1,0 +1,14 @@
+{
+  "name": "@repo/theme",
+  "version": "1.0.0",
+  "private": true,
+  "sideEffects": false,
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
+  }
+}

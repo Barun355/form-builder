@@ -17,6 +17,8 @@ import {
   getByPublicSlugOutputModel,
   getFormByIdInputModel,
   getFormByIdOutputModel,
+  lastUsedThemeIdInputModel,
+  lastUsedThemeIdOutputModel,
   listFormsInputModel,
   listFormsOutputModel,
   listPublicInputModel,
@@ -102,6 +104,29 @@ export const formRouter = router({
         createdBy: ctx.user.id,
         ...input,
       });
+    }),
+
+  lastUsedThemeId: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/lastUsedThemeId"),
+        tags: TAGS,
+        summary: "Most recently used theme id for the current user",
+        description:
+          "Returns the themeId from the most recently saved/created form_version row across the user's own forms. Used by the New Form dialog to pre-select the last theme the user worked with. Returns null when the user has no themed forms.",
+      },
+    })
+    .input(lastUsedThemeIdInputModel)
+    .output(lastUsedThemeIdOutputModel)
+    .query(async ({ ctx }) => {
+      try {
+        return await formService.lastUsedThemeId({
+          requestedBy: ctx.user.id,
+        });
+      } catch (err) {
+        mapServiceError(err);
+      }
     }),
 
   getFormById: protectedProcedure

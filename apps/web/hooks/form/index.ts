@@ -235,3 +235,23 @@ export const usePublicForm = (
 
   return { form: data, isLoading, isFetching, isError, error, refetch };
 };
+
+/**
+ * Pre-selects the theme in the New-form dialog. Returns the most
+ * recently used theme id across the caller's own forms, or null when
+ * the user has no themed forms (first-time experience — System Default
+ * stays selected).
+ *
+ * Loaded once at dialog mount; not refetched on focus because the
+ * "default" is a stable UX hint, not a live value.
+ */
+export const useDefaultThemeForCreate = () => {
+  const { data, isLoading } = trpc.form.lastUsedThemeId.useQuery(
+    {},
+    {
+      refetchOnWindowFocus: false,
+      staleTime: Number.POSITIVE_INFINITY,
+    },
+  );
+  return { themeId: data?.themeId ?? null, isLoading };
+};

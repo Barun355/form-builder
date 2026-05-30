@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -27,7 +28,8 @@ import {
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { useCreateForm, useForms } from "~/hooks/form";
+import { ThemePicker } from "~/components/theme-picker";
+import { useCreateForm, useDefaultThemeForCreate, useForms } from "~/hooks/form";
 import { useUser } from "~/hooks/auth";
 
 // Mirrors PLANS.free.formLimit / PLANS.free.monthlySubmissionsVisible
@@ -56,6 +58,15 @@ export function CreateFormDialog() {
   const { createFormAsync, isPending } = useCreateForm();
   const { user } = useUser();
   const { totalCount } = useForms({ limit: 1 });
+  const { themeId: defaultThemeId } = useDefaultThemeForCreate();
+
+  // Theme selection lives outside react-hook-form because the picker is
+  // a controlled component with non-input semantics. Re-syncs to the
+  // default when it loads and when the dialog re-opens.
+  const [themeId, setThemeId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (open) setThemeId(defaultThemeId);
+  }, [open, defaultThemeId]);
 
   const isFreePlan = user?.plan === "free";
   const formCount = totalCount ?? 0;
@@ -68,6 +79,7 @@ export function CreateFormDialog() {
         description: values.description?.trim()
           ? values.description
           : undefined,
+        themeId,
       });
       reset();
       setOpen(false);
@@ -166,6 +178,21 @@ export function CreateFormDialog() {
                 disabled={atCap}
                 {...register("description", { maxLength: 255 })}
               />
+            </Field>
+            <Field>
+              <FieldLabel>
+                Theme{" "}
+                <span className="text-muted-foreground">(optional)</span>
+              </FieldLabel>
+              <ThemePicker
+                value={themeId}
+                onChange={setThemeId}
+                disabled={atCap}
+              />
+              <FieldDescription>
+                Pre-filled with your last used theme. Change anytime from
+                the form&apos;s settings.
+              </FieldDescription>
             </Field>
           </FieldGroup>
 

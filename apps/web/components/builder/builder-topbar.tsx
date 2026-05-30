@@ -125,6 +125,9 @@ export function BuilderTopbar({ state, onPreview }: Props) {
       const result = await publish.mutateAsync({ id: formId });
       setStatus(result.status);
       setPublishedVersionId(result.publishedVersionId);
+      // Live-theme model: no snapshot is taken on publish; the public
+      // form fetches the attached theme's current tokens at render time.
+      // Nothing extra to mirror in the store.
 
       // First-publish welcome email — server only sets `notification`
       // when this was the user's first published form ever.
@@ -215,6 +218,15 @@ export function BuilderTopbar({ state, onPreview }: Props) {
             Share
           </Button>
         ) : null}
+
+        {/*
+          The "republish to apply theme change" nudge was removed when we
+          switched to the live-theme model. The public form now fetches
+          the attached theme's CURRENT tokens via JOIN at render time, so
+          theme edits propagate to consumers immediately — no re-publish
+          needed. Re-publish only matters for SCHEMA changes (fields,
+          sections), which the Save button + Publish dropdown handle.
+        */}
 
         <Button
           size="sm"

@@ -187,6 +187,7 @@ export function FormRenderer({
             type="submit"
             loading={isSubmitting && isLast}
             disabled={isSubmitting && !isLast}
+            data-sf-submit
           >
             {isLast ? submitLabel : "Next"}
           </Button>
@@ -208,14 +209,25 @@ function RendererSection({
   onChange: (id: string, value: unknown) => void;
 }) {
   return (
-    <section className="flex flex-col gap-5">
+    <section className="flex flex-col gap-5" data-sf-section>
       {section.title || section.description ? (
         <header>
           {section.title ? (
-            <h3 className="text-h4 text-foreground">{section.title}</h3>
+            // Theme owns the COLOR via the [data-sf-heading="2"] rule
+            // (color-fix.md §2a — the rule sets color explicitly so it
+            // beats Tailwind on specificity AND removes the conflict by
+            // not putting `text-foreground` on the element to begin with).
+            // `text-h4` only sets font-size; safe to keep as a no-theme
+            // fallback for size.
+            <h3 className="text-h4" data-sf-heading="2">
+              {section.title}
+            </h3>
           ) : null}
           {section.description ? (
-            <p className="text-body-sm text-muted-foreground mt-1">
+            // text-muted-foreground stripped — the theme rule
+            // [data-sf-section-description] owns the color. mt-1 is
+            // pure layout; safe to keep.
+            <p className="text-body-sm mt-1" data-sf-section-description>
               {section.description}
             </p>
           ) : null}
@@ -244,14 +256,25 @@ function RendererField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
+  // data-sf-* hooks are the stable contract the theme builder targets.
+  // Adding/renaming an attribute here also requires updating the compiler
+  // in @repo/theme/compile.ts.
   const baseLabel = (
-    <Label htmlFor={field.id} className="text-label">
+    <Label htmlFor={field.id} className="text-label" data-sf-field-label>
       {field.label}
-      {field.required ? <span className="text-destructive">*</span> : null}
+      {field.required ? (
+        // text-destructive stripped — theme rule [data-sf-required-mark]
+        // owns the color via --sf-color-error.
+        <span data-sf-required-mark>*</span>
+      ) : null}
     </Label>
   );
   const helpText = field.helpText ? (
-    <p className="text-body-sm text-muted-foreground mt-1">{field.helpText}</p>
+    // text-muted-foreground stripped — theme rule [data-sf-field-helper]
+    // owns the color via --sf-color-muted-foreground.
+    <p className="text-body-sm mt-1" data-sf-field-helper>
+      {field.helpText}
+    </p>
   ) : null;
 
   switch (field.type) {
@@ -259,7 +282,7 @@ function RendererField({
     case "email":
     case "phone":
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field={field.type}>
           {baseLabel}
           <Input
             id={field.id}
@@ -271,6 +294,7 @@ function RendererField({
             onChange={(e) => onChange(e.target.value)}
             minLength={field.validation?.minLength}
             maxLength={field.validation?.maxLength}
+            data-sf-field-input
           />
           {helpText}
         </div>
@@ -278,7 +302,7 @@ function RendererField({
 
     case "number":
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field="number">
           {baseLabel}
           <Input
             id={field.id}
@@ -292,6 +316,7 @@ function RendererField({
             }
             min={field.validation?.min}
             max={field.validation?.max}
+            data-sf-field-input
           />
           {helpText}
         </div>
@@ -299,7 +324,7 @@ function RendererField({
 
     case "textarea":
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field="textarea">
           {baseLabel}
           <Textarea
             id={field.id}
@@ -309,6 +334,7 @@ function RendererField({
             rows={4}
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
+            data-sf-field-input
           />
           {helpText}
         </div>
@@ -317,7 +343,7 @@ function RendererField({
     case "date":
     case "datetime":
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field={field.type}>
           {baseLabel}
           <Input
             id={field.id}
@@ -326,6 +352,7 @@ function RendererField({
             required={field.required}
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
+            data-sf-field-input
           />
           {helpText}
         </div>
@@ -333,14 +360,14 @@ function RendererField({
 
     case "select":
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field="select">
           {baseLabel}
           <Select
             value={(value as string) ?? ""}
             onValueChange={onChange}
             disabled={field.disabled}
           >
-            <SelectTrigger>
+            <SelectTrigger data-sf-field-input>
               <SelectValue placeholder={field.placeholder ?? "Choose..."} />
             </SelectTrigger>
             <SelectContent>
@@ -357,7 +384,7 @@ function RendererField({
 
     case "radio":
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field="radio">
           {baseLabel}
           <RadioGroup
             value={(value as string) ?? ""}
@@ -386,7 +413,7 @@ function RendererField({
         onChange(next);
       };
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field="checkbox">
           {baseLabel}
           <div className="flex flex-col gap-2">
             {(field.options ?? []).map((opt) => (
@@ -410,12 +437,13 @@ function RendererField({
 
     case "file":
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5" data-sf-field="file">
           {baseLabel}
           <div
             className={cn(
               "flex items-center justify-between gap-2 rounded-md border border-dashed border-border px-3 py-2 text-body-sm text-muted-foreground",
             )}
+            data-sf-field-input
           >
             <span>Choose file…</span>
             <span className="text-caps uppercase text-warning">

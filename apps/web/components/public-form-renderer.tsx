@@ -5,7 +5,10 @@ import { IconCircleCheck, IconLock } from "@tabler/icons-react";
 
 import { Button } from "~/components/ui/button";
 import { FormRenderer } from "~/components/form-renderer";
+import { ThemeStyle } from "~/components/theme-style";
+import { cn } from "~/lib/utils";
 import type { FormSchemaI } from "@repo/database/models/form-versions";
+import type { ThemeTokensI } from "@repo/theme";
 import {
   useCompleteSubmission,
   useStartSubmission,
@@ -17,6 +20,12 @@ type Props = {
   status: "published" | "closed";
   versionId: string;
   schema: FormSchemaI;
+  /**
+   * Theme tokens snapshot from the form version. `null` renders the
+   * platform default look. Read-only on the client — never trusted as
+   * input, never editable here.
+   */
+  theme?: ThemeTokensI | null;
 };
 
 type ClientMeta = {
@@ -51,6 +60,7 @@ export function PublicFormRenderer({
   status,
   versionId,
   schema,
+  theme = null,
 }: Props) {
   const { mutateAsync: startAsync } = useStartSubmission();
   const { mutateAsync: completeAsync } = useCompleteSubmission();
@@ -171,41 +181,65 @@ export function PublicFormRenderer({
         : "Submit";
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-12">
-      <header className="mb-8">
-        <h1 className="text-h2 text-foreground">{formTitle}</h1>
-        {formDescription ? (
-          <p className="text-body text-muted-foreground mt-2">
-            {formDescription}
-          </p>
+    // Outer full-bleed div carries `data-sf-root` so the compiled theme
+    // CSS paints the WHOLE page background (solid / gradient / image),
+    // not just the constrained card area. Inner `.sf-card` div gets the
+    // theme's surface color + radius + shadow via the compiler's
+    // `[data-sf-root] .sf-card` rule. This two-layer split is the
+    // contract the compiler expects — see packages/theme/compile.ts.
+    //
+    // Mode class:
+    //   mode=light → .sf-light  (force light, ignore OS pref)
+    //   mode=dark  → .sf-dark   (force dark,  ignore OS pref)
+    //   mode=auto  → no class   (let the compiler's
+    //                            @media (prefers-color-scheme: dark) decide)
+    <div
+      className={cn(
+        "min-h-screen sf-form",
+        theme?.mode === "light" && "sf-light",
+        theme?.mode === "dark" && "sf-dark",
+      )}
+      data-sf-root
+    >
+      <ThemeStyle tokens={theme} />
+      <div className="mx-auto w-full max-w-2xl px-6 py-12">
+        {status === "closed" ? (
+          <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 mb-6 flex items-center gap-3">
+            <IconLock className="size-4 text-warning shrink-0" />
+            <p className="text-body-sm text-warning">
+              This form is no longer accepting submissions.
+            </p>
+          </div>
         ) : null}
-      </header>
 
-      {status === "closed" ? (
-        <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 mb-6 flex items-center gap-3">
-          <IconLock className="size-4 text-warning shrink-0" />
-          <p className="text-body-sm text-warning">
-            This form is no longer accepting submissions.
-          </p>
+        <div className="sf-card">
+          <header className="mb-8">
+            <h1 data-sf-heading="1">{formTitle}</h1>
+            {formDescription ? (
+              <p className="mt-2" data-sf-section-description>
+                {formDescription}
+              </p>
+            ) : null}
+          </header>
+
+          {/*
+            First focus/click anywhere inside this wrapper triggers `start`.
+            React's synthetic onFocus bubbles, so it catches focus on any
+            descendant input. onClick covers page-tab / section clicks too.
+          */}
+          <div onFocus={ensureStarted} onClick={ensureStarted}>
+            <FormRenderer
+              key={resetKey}
+              schema={schema}
+              mode="live"
+              onSubmit={handleSubmit}
+              readOnly={status === "closed"}
+              withHoneypot
+              isSubmitting={phase !== "idle"}
+              submitLabel={submitLabel}
+            />
+          </div>
         </div>
-      ) : null}
-
-      {/*
-        First focus/click anywhere inside this wrapper triggers `start`.
-        React's synthetic onFocus bubbles, so it catches focus on any
-        descendant input. onClick covers page-tab / section clicks too.
-      */}
-      <div onFocus={ensureStarted} onClick={ensureStarted}>
-        <FormRenderer
-          key={resetKey}
-          schema={schema}
-          mode="live"
-          onSubmit={handleSubmit}
-          readOnly={status === "closed"}
-          withHoneypot
-          isSubmitting={phase !== "idle"}
-          submitLabel={submitLabel}
-        />
       </div>
     </div>
   );

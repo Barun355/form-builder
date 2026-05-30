@@ -176,6 +176,21 @@ pnpm run db:generate
 say "Applying migrations"
 pnpm run db:migrate
 
+# JSONB content migrations (e.g. token shape changes) — drizzle-kit can't
+# generate these, they live in packages/database/drizzle-data/*.sql and
+# get applied in order. Each file is idempotent on re-run.
+say "Applying data migrations (tokens shape, etc.)"
+pnpm db:data-migrate
+
+# Seed the house themes (System Default / Aurora / Minimal Light) under
+# the synthetic Simple Form system user. Idempotent — re-runs refresh the
+# tokens instead of creating duplicates. Also retires presets removed
+# from the catalog (e.g. Dark Studio → replaced by Aurora). Soft-failing
+# is fine: the app still works without seeded themes (forms fall back to
+# system default look), so don't abort the deploy on a seed hiccup.
+say "Seeding default themes"
+pnpm seed:default-themes || echo "  ⚠ default-themes seed reported a non-zero exit — continuing"
+
 # Free RAM for the build. Postgres isn't needed during `pnpm build` (next
 # build + tsup are offline), and on a light VPS the container competing for
 # memory can OOM-kill the build. Stop it now, restart before PM2 (apps need

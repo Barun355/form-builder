@@ -5,6 +5,7 @@ import { formVersionRouter } from "./routes/form-versions/route";
 import { formSubmissionsRouter } from "./routes/form-submissions/route";
 import { dashboardRouter } from "./routes/dashboard/route";
 import { analyticsRouter } from "./routes/analytics/route";
+import { themeRouter } from "./routes/theme/route";
 
 export const serverRouter = router({
   auth: authRouter,
@@ -13,6 +14,7 @@ export const serverRouter = router({
   formSubmissions: formSubmissionsRouter,
   dashboard: dashboardRouter,
   analytics: analyticsRouter,
+  theme: themeRouter,
 });
 
 export { createContext } from "./context";

@@ -40,6 +40,15 @@ export type BuilderState = {
   schema: FormSchemaI;
   initialSchema: FormSchemaI;
 
+  // Theme attached to the form's latest version. null = System Default
+  // look on the public URL. Lives in the store so the Settings sheet's
+  // Appearance section can read/write it; saved via saveDraft (themeId
+  // travels alongside schema on every draft save). Live-theme model:
+  // theme edits propagate to consumers immediately (the public form
+  // fetches the attached theme's current tokens at render time), so
+  // there's no "published theme" snapshot to track separately.
+  themeId: string | null;
+
   // Versions
   versions: BuilderVersionItem[];
   selectedVersionId: string | null;
@@ -67,6 +76,7 @@ export type BuilderState = {
     visibility: FormVisibility;
     publishedVersionId: string | null;
     schema: FormSchemaI;
+    themeId: string | null;
     versions: BuilderVersionItem[];
     latestVersionId: string;
   }): void;
@@ -75,6 +85,7 @@ export type BuilderState = {
   setVisibility(v: FormVisibility): void;
   setPublishedVersionId(id: string | null): void;
   setVersions(v: BuilderVersionItem[], latestVersionId: string): void;
+  setThemeId(id: string | null): void;
 
   switchVersion(versionId: string, schema: FormSchemaI): void;
 
@@ -208,6 +219,7 @@ export function createBuilderStore(): BuilderStore {
 
     schema: EMPTY_SCHEMA,
     initialSchema: EMPTY_SCHEMA,
+    themeId: null,
 
     versions: [],
     selectedVersionId: null,
@@ -223,7 +235,7 @@ export function createBuilderStore(): BuilderStore {
     lastSavedAt: null,
     saveError: null,
 
-    init({ formId, formSlug, title, status, visibility, publishedVersionId, schema, versions, latestVersionId }) {
+    init({ formId, formSlug, title, status, visibility, publishedVersionId, schema, themeId, versions, latestVersionId }) {
       const hydrated = hydrate(schema);
       set({
         formId,
@@ -234,6 +246,7 @@ export function createBuilderStore(): BuilderStore {
         publishedVersionId,
         schema: hydrated,
         initialSchema: clone(hydrated),
+        themeId,
         versions,
         selectedVersionId: latestVersionId,
         latestVersionId,
@@ -266,6 +279,10 @@ export function createBuilderStore(): BuilderStore {
 
     setVersions(v, latestVersionId) {
       set({ versions: v, latestVersionId });
+    },
+
+    setThemeId(id) {
+      set({ themeId: id });
     },
 
     switchVersion(versionId, schema) {

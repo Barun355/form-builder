@@ -11,6 +11,7 @@ import {
   IconDashboard,
   IconLogout,
   IconInnerShadowTop,
+  IconPalette,
 } from "@tabler/icons-react";
 
 import {
@@ -46,6 +47,7 @@ import { useSignOut, useUser } from "~/hooks/auth";
 const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: IconDashboard },
   { title: "Forms", href: "/dashboard/forms", icon: IconClipboardText },
+  { title: "Themes", href: "/dashboard/themes", icon: IconPalette },
   { title: "Analytics", href: "/dashboard/analytics", icon: IconChartBar },
   { title: "Explore", href: "/explore", icon: IconCompass },
 ] as const;

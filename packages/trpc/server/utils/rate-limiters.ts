@@ -18,3 +18,12 @@ export const submissionCompleteLimiter = new RateLimiter({
   limit: env.RATE_LIMIT_SUBMISSION_PER_MIN,
   windowMs: 60_000,
 });
+
+// Theme writes are keyed per-user (not per-IP) since they're behind
+// `protectedProcedure`. Catches a runaway client that loops `create` or
+// `update` without rate-limiting the rest of the app.
+export const themeWriteLimiter = new RateLimiter({
+  name: "theme:write",
+  limit: env.RATE_LIMIT_THEME_PER_MIN,
+  windowMs: 60_000,
+});

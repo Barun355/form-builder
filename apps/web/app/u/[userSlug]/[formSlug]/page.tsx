@@ -7,6 +7,7 @@ import { PublicFormRenderer } from "~/components/public-form-renderer";
 import { Skeleton } from "~/components/ui/skeleton";
 import { usePublicForm } from "~/hooks/form";
 import type { FormSchemaI } from "@repo/database/models/form-versions";
+import type { ThemeTokensI } from "@repo/theme";
 
 export default function PublicFormPage({
   params,
@@ -51,6 +52,10 @@ export default function PublicFormPage({
       status={form.status}
       versionId={form.publishedVersion.id}
       schema={form.publishedVersion.schema as FormSchemaI}
+      // `theme` is the server-owned snapshot taken at form publish time
+      // (null for unthemed forms). Strict-typed at the boundary so the
+      // renderer downstream gets the proper shape instead of `unknown`.
+      theme={(form.theme as ThemeTokensI | null) ?? null}
     />
   );
 }

@@ -15,7 +15,9 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
+import { ThemePicker } from "~/components/theme-picker";
 import { useUpdateForm } from "~/hooks/form";
+import { useSaveDraft } from "~/hooks/form-versions";
 import type { BuilderState, FormVisibility } from "./store";
 
 type Props = {
@@ -27,6 +29,8 @@ type Props = {
 export function FormSettingsSheet({ open, onOpenChange, state }: Props) {
   const ty = state.schema.thankYou ?? {};
   const { updateFormAsync, isPending } = useUpdateForm();
+  const { mutateAsync: saveDraftAsync, isPending: isSavingTheme } =
+    useSaveDraft();
 
   async function handleVisibilityChange(makePublic: boolean) {
     const next: FormVisibility = makePublic ? "PUBLIC" : "UNLISTED";
@@ -42,6 +46,29 @@ export function FormSettingsSheet({ open, onOpenChange, state }: Props) {
       state.setVisibility(prev);
       const message = err instanceof Error ? err.message : "Failed";
       toast.error(`Visibility update failed: ${message}`);
+    }
+  }
+
+  // Theme change saves immediately via saveDraft so the attachment lives
+  // on the form's latest version. The schema travels along unchanged.
+  async function handleThemeChange(nextThemeId: string | null) {
+    const prev = state.themeId;
+    if (nextThemeId === prev) return;
+    state.setThemeId(nextThemeId); // optimistic
+    try {
+      await saveDraftAsync({
+        formId: state.formId,
+        schema: state.schema,
+        themeId: nextThemeId,
+      });
+      toast.success(
+        nextThemeId === null ? "Theme detached" : "Theme applied",
+      );
+    } catch (err) {
+      state.setThemeId(prev);
+      const message =
+        err instanceof Error ? err.message : "Failed to update theme";
+      toast.error(`Theme update failed: ${message}`);
     }
   }
 
@@ -91,6 +118,25 @@ export function FormSettingsSheet({ open, onOpenChange, state }: Props) {
                   </p>
                 </div>
               ) : null}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-h4 text-foreground mb-3">Appearance</h3>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Theme</Label>
+                <ThemePicker
+                  value={state.themeId}
+                  onChange={handleThemeChange}
+                  disabled={isSavingTheme}
+                />
+                <p className="text-body-sm text-muted-foreground">
+                  Paints the form&apos;s public URL. Theme edits flow
+                  live — the public form reads the theme&apos;s current
+                  tokens each render.
+                </p>
+              </div>
             </div>
           </section>
 

@@ -1,0 +1,1 @@
+ALTER TABLE "form_versions" DROP COLUMN "theme_snapshot";

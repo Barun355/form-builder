@@ -12,6 +12,7 @@
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/mailer": "workspace:*",
+    "@repo/theme": "workspace:*",
     "@types/jsonwebtoken": "^9.0.10",
     "csv-stringify": "^6.7.0",
     "google-auth-library": "^10.5.0",

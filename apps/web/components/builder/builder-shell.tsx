@@ -20,6 +20,7 @@ import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useForm } from "~/hooks/form";
 import { useFormVersions } from "~/hooks/form-versions";
+import { useTheme } from "~/hooks/theme";
 
 import { BuilderCanvas } from "./builder-canvas";
 import { BuilderTopbar } from "./builder-topbar";
@@ -52,6 +53,13 @@ export function BuilderShell({ formId }: Props) {
   } = useForm(formId);
   const { items: versions, isLoading: versionsLoading } = useFormVersions(formId);
 
+  // Pre-warm the React Query cache for whatever theme is attached, so
+  // PreviewModal's `useTheme(state.themeId)` resolves from cache on its
+  // first open instead of racing the fetch. Disabled when no theme is
+  // attached. Re-fires when the user picks a new theme via the settings
+  // sheet (state.themeId changes).
+  useTheme(state.themeId ?? undefined);
+
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
 
@@ -66,6 +74,7 @@ export function BuilderShell({ formId }: Props) {
       visibility: form.visibility,
       publishedVersionId: form.publishedVersionId ?? null,
       schema: latest.schema as never,
+      themeId: latest.themeId ?? null,
       versions: versions.map((v) => ({
         id: v.id,
         version: v.version,
@@ -208,6 +217,7 @@ export function BuilderShell({ formId }: Props) {
         onOpenChange={setPreviewOpen}
         title={state.title}
         schema={state.schema}
+        themeId={state.themeId}
       />
     </DndContext>
   );

@@ -10,9 +10,13 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "setup": "bash setup.sh",
-    "check:env": "tsx scripts/check-env-drift.mts"
+    "check:env": "tsx scripts/check-env-drift.mts",
+    "seed:default-themes": "dotenv -e packages/database/.env -- tsx scripts/seed-default-themes.ts",
+    "db:data-migrate": "bash scripts/run-data-migrations.sh"
   },
   "devDependencies": {
+    "@repo/database": "workspace:*",
+    "@repo/theme": "workspace:*",
     "@types/node": "^22.15.3",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",
